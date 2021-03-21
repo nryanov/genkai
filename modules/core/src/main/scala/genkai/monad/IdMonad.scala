@@ -11,13 +11,19 @@ object IdMonad extends MonadError[Identity] {
 
   override def raiseError[A](error: Throwable): Identity[A] = throw error
 
-  override def adaptError[A](fa: Identity[A])(pf: PartialFunction[Throwable, Throwable]): Identity[A] = fa
+  override def adaptError[A](fa: Identity[A])(
+    pf: PartialFunction[Throwable, Throwable]
+  ): Identity[A] = fa
 
   override def handleError[A](fa: Identity[A])(pf: PartialFunction[Throwable, A]): Identity[A] = fa
 
-  override def handleErrorWith[A](fa: Identity[A])(pf: PartialFunction[Throwable, Identity[A]]): Identity[A] = fa
+  override def handleErrorWith[A](fa: Identity[A])(
+    pf: PartialFunction[Throwable, Identity[A]]
+  ): Identity[A] = fa
 
-  override def ifA[A](fcond: Identity[Boolean])(ifTrue: => Identity[A], ifFalse: => Identity[A]): Identity[A] =
+  override def ifA[A](
+    fcond: Identity[Boolean]
+  )(ifTrue: => Identity[A], ifFalse: => Identity[A]): Identity[A] =
     if (fcond) ifTrue
     else ifFalse
 
@@ -26,4 +32,10 @@ object IdMonad extends MonadError[Identity] {
     else unit
 
   override def void[A](fa: Identity[A]): Identity[Unit] = unit
+
+  override def eval[A](f: => A): Identity[A] = f
+
+  override def guarantee[A](f: Identity[A])(g: => Identity[Unit]): Identity[A] =
+    try f
+    finally g
 }

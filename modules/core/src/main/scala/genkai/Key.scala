@@ -1,5 +1,10 @@
 package genkai
 
-trait Key {
-  def value: String
+trait Key[A] {
+
+  def convert(value: A): String
+}
+
+object Key {
+  def apply[A](implicit inst: Key[A]): inst.type = inst
 }

@@ -1,6 +1,6 @@
 package genkai.monad
 
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 object TryMonad extends MonadError[Try] {
   override def pure[A](value: A): Try[A] = Try(value)
@@ -22,10 +22,11 @@ object TryMonad extends MonadError[Try] {
     case _                                               => fa
   }
 
-  override def handleErrorWith[A](fa: Try[A])(pf: PartialFunction[Throwable, Try[A]]): Try[A] = fa match {
-    case Failure(exception) if pf.isDefinedAt(exception) => suspend(pf(exception))
-    case _                                               => fa
-  }
+  override def handleErrorWith[A](fa: Try[A])(pf: PartialFunction[Throwable, Try[A]]): Try[A] =
+    fa match {
+      case Failure(exception) if pf.isDefinedAt(exception) => suspend(pf(exception))
+      case _                                               => fa
+    }
 
   override def ifA[A](fcond: Try[Boolean])(ifTrue: => Try[A], ifFalse: => Try[A]): Try[A] =
     fcond.flatMap { flag =>
@@ -38,4 +39,12 @@ object TryMonad extends MonadError[Try] {
     else unit
 
   override def void[A](fa: Try[A]): Try[Unit] = fa.map(_ => ())
+
+  override def eval[A](f: => A): Try[A] = Try(f)
+
+  override def guarantee[A](f: Try[A])(g: => Try[Unit]): Try[A] =
+    f match {
+      case Failure(exception) => suspend(g).flatMap(_ => Failure(exception))
+      case Success(value)     => suspend(g).map(_ => value)
+    }
 }

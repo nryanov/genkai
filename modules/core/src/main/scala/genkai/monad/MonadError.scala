@@ -23,9 +23,11 @@ trait MonadError[F[_]] {
 
   def void[A](fa: F[A]): F[Unit]
 
-  def eval[A](f: => A): F[A] = map(unit)(_ => f)
+  def eval[A](f: => A): F[A]
 
   def suspend[A](fa: => F[A]): F[A] = flatten(eval(fa))
 
   def flatten[A](fa: F[F[A]]): F[A] = flatMap(fa)(v => identity(v))
+
+  def guarantee[A](f: F[A])(g: => F[Unit]): F[A]
 }

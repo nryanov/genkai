@@ -1,6 +1,6 @@
 package genkai.monad
 
-import scala.util.Failure
+import scala.util.{Failure, Success, Try}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
 class FutureMonad(implicit ex: ExecutionContext) extends MonadAsyncError[Future] {
@@ -21,10 +21,14 @@ class FutureMonad(implicit ex: ExecutionContext) extends MonadAsyncError[Future]
   override def handleError[A](fa: Future[A])(pf: PartialFunction[Throwable, A]): Future[A] =
     fa.recover(pf)
 
-  override def handleErrorWith[A](fa: Future[A])(pf: PartialFunction[Throwable, Future[A]]): Future[A] =
+  override def handleErrorWith[A](fa: Future[A])(
+    pf: PartialFunction[Throwable, Future[A]]
+  ): Future[A] =
     fa.recoverWith(pf)
 
-  override def ifA[A](fcond: Future[Boolean])(ifTrue: => Future[A], ifFalse: => Future[A]): Future[A] =
+  override def ifA[A](
+    fcond: Future[Boolean]
+  )(ifTrue: => Future[A], ifFalse: => Future[A]): Future[A] =
     fcond.flatMap { flag =>
       if (flag) ifTrue
       else ifFalse
@@ -44,6 +48,23 @@ class FutureMonad(implicit ex: ExecutionContext) extends MonadAsyncError[Future]
     k {
       case Left(value)  => p.failure(value)
       case Right(value) => p.success(value)
+    }
+
+    p.future
+  }
+
+  override def guarantee[A](f: Future[A])(g: => Future[Unit]): Future[A] = {
+    val p = Promise[A]()
+
+    def tryF = Try(g) match {
+      case Failure(exception) => Future.failed(exception)
+      case Success(value)     => value
+    }
+
+    f.onComplete {
+      case Failure(exception) =>
+        tryF.flatMap(_ => Future.failed(exception)).onComplete(r => p.complete(r))
+      case Success(value) => tryF.map(_ => value).onComplete(r => p.complete(r))
     }
 
     p.future
