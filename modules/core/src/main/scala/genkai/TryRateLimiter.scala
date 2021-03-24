@@ -1,5 +1,7 @@
 package genkai
 
+import java.time.Instant
+
 import genkai.monad.{MonadError, TryMonad}
 
 import scala.util.Try
@@ -12,7 +14,8 @@ final class TryRateLimiter(
 
   override def reset[A: Key](key: A): Try[Unit] = monadError.eval(rateLimiter.reset(key))
 
-  override def acquire[A: Key](key: A): Try[Boolean] = monadError.eval(rateLimiter.acquire(key))
+  override def acquire[A: Key](key: A, instant: Instant): Try[Boolean] =
+    monadError.eval(rateLimiter.acquire(key, instant))
 
   override def close(): Try[Unit] = monadError.eval(rateLimiter.close())
 

@@ -1,7 +1,7 @@
 lazy val jedisVersion = "3.5.2"
 lazy val lettuceVersion = "6.0.3.RELEASE"
 lazy val redissonVersion = "3.15.1"
-lazy val scalatestVersion = "3.2.0"
+lazy val munitVersion = "0.7.22"
 lazy val scalacheckPlusVersion = "3.2.0.0"
 lazy val scalamockVersion = "5.0.0"
 lazy val scalacheckVersion = "1.14.3"
@@ -81,22 +81,24 @@ lazy val core = project
   .settings(
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % slf4jApiVersion,
-      "org.scalatest" %% "scalatest" % scalatestVersion % Test,
-      "org.scalatestplus" %% "scalacheck-1-14" % scalacheckPlusVersion % Test,
+      "org.scalameta" %% "munit" % munitVersion % Test,
+      "org.scalameta" %% "munit-scalacheck" % munitVersion % Test,
       "org.scalamock" %% "scalamock" % scalamockVersion % Test,
-      "org.scalacheck" %% "scalacheck" % scalacheckVersion % Test,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
-      "com.dimafeng" %% "testcontainers-scala" % testContainersVersion % Test
-    )
+      "com.dimafeng" %% "testcontainers-scala" % testContainersVersion % Test,
+      "com.dimafeng" %% "testcontainers-scala-munit" % testContainersVersion % Test
+    ),
+    testFrameworks += new TestFramework("munit.Framework")
   )
 
 lazy val redisCommon = project
-  .in(file("modules/redis-common"))
+  .in(file("modules/redis/common"))
   .settings(allSettings)
   .settings(moduleName := "genkai-redis-common")
+  .dependsOn(core % compileAndTest)
 
 lazy val jedis = project
-  .in(file("modules/jedis"))
+  .in(file("modules/redis/jedis"))
   .settings(allSettings)
   .settings(moduleName := "genkai-jedis")
   .settings(
@@ -104,11 +106,10 @@ lazy val jedis = project
       "redis.clients" % "jedis" % jedisVersion
     )
   )
-  .dependsOn(redisCommon)
-  .dependsOn(core % compileAndTest)
+  .dependsOn(redisCommon % compileAndTest)
 
 lazy val lettuce = project
-  .in(file("modules/lettuce"))
+  .in(file("modules/redis/lettuce"))
   .settings(allSettings)
   .settings(moduleName := "genkai-lettuce")
   .settings(
@@ -116,11 +117,10 @@ lazy val lettuce = project
       "io.lettuce" % "lettuce-core" % lettuceVersion
     )
   )
-  .dependsOn(redisCommon)
-  .dependsOn(core % compileAndTest)
+  .dependsOn(redisCommon % compileAndTest)
 
 lazy val redisson = project
-  .in(file("modules/redisson"))
+  .in(file("modules/redis/redisson"))
   .settings(allSettings)
   .settings(moduleName := "genkai-redisson")
   .settings(
@@ -128,5 +128,4 @@ lazy val redisson = project
       "org.redisson" % "redisson" % redissonVersion
     )
   )
-  .dependsOn(redisCommon)
-  .dependsOn(core % compileAndTest)
+  .dependsOn(redisCommon % compileAndTest)

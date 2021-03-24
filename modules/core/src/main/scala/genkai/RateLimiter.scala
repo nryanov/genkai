@@ -1,5 +1,7 @@
 package genkai
 
+import java.time.Instant
+
 import genkai.monad.MonadError
 
 trait RateLimiter[F[_]] {
@@ -7,7 +9,9 @@ trait RateLimiter[F[_]] {
 
   def reset[A: Key](key: A): F[Unit]
 
-  def acquire[A: Key](key: A): F[Boolean]
+  def acquire[A: Key](key: A, instant: Instant): F[Boolean]
+
+  final def acquire[A: Key](key: A): F[Boolean] = acquire(key, Instant.now())
 
   def close(): F[Unit]
 

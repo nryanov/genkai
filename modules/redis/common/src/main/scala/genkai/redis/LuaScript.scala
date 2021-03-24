@@ -1,4 +1,4 @@
-package genkai.redis.common
+package genkai.redis
 
 /*
 Key updates should be executed as an atomic operation. Usually, it can be achieved using `multi` command.
