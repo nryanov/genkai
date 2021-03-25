@@ -16,6 +16,8 @@ package object syntax {
       F.adaptError(fa)(pf)
 
     def guarantee(g: => F[Unit])(implicit F: MonadError[F]): F[A] = F.guarantee(fa)(g)
+
+    def void(implicit F: MonadError[F]): F[Unit] = F.void(fa)
   }
 
   implicit final class MonadErrorValueOps[F[_], A](private val v: A) extends AnyVal {

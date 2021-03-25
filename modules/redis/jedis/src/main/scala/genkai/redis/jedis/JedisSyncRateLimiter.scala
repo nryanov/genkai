@@ -6,7 +6,7 @@ import genkai.{Identity, Strategy}
 import genkai.redis.RedisStrategy
 import redis.clients.jedis.JedisPool
 
-final class SyncJedisRateLimiter private (
+class JedisSyncRateLimiter private (
   pool: JedisPool,
   strategy: RedisStrategy,
   closeClient: Boolean,
@@ -21,11 +21,11 @@ final class SyncJedisRateLimiter private (
       permissionsSha
     )
 
-object SyncJedisRateLimiter {
+object JedisSyncRateLimiter {
   def apply(
     pool: JedisPool,
     strategy: Strategy
-  ): SyncJedisRateLimiter = {
+  ): JedisSyncRateLimiter = {
     implicit val monad = IdMonad
     val redisStrategy = RedisStrategy(strategy)
 
@@ -37,6 +37,12 @@ object SyncJedisRateLimiter {
         )
       }(monad.eval(client.close()))
     }
-    new SyncJedisRateLimiter(pool, redisStrategy, false, acquireSha, permissionsSha)
+    new JedisSyncRateLimiter(
+      pool = pool,
+      strategy = redisStrategy,
+      closeClient = false,
+      acquireSha = acquireSha,
+      permissionsSha = permissionsSha
+    )
   }
 }

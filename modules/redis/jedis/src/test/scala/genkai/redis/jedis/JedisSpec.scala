@@ -3,7 +3,7 @@ package genkai.redis.jedis
 import genkai.redis.{RedisContainer, RedisSpecForAll}
 import redis.clients.jedis.JedisPool
 
-trait JedisSpec extends RedisSpecForAll {
+trait JedisSpec[F[_]] extends RedisSpecForAll[F] {
   var jedisPool: JedisPool = _
 
   override def afterContainersStart(redis: RedisContainer): Unit =

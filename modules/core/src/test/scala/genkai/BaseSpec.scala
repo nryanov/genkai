@@ -1,3 +1,75 @@
 package genkai
 
-trait BaseSpec extends munit.FunSuite
+import java.time.Instant
+
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+
+trait BaseSpec[F[_]] extends munit.FunSuite {
+  implicit val ec: ExecutionContext = ExecutionContext.global
+
+  def rateLimiter(strategy: Strategy): RateLimiter[F]
+
+  def toFuture[A](v: F[A]): Future[A]
+
+  test("fixed window token acquiring") {
+    val limiter = rateLimiter(Strategy.FixedWindow(10, Window.Hour))
+
+    for {
+      r1 <- toFuture(limiter.acquire("key"))
+      r2 <- toFuture(limiter.permissions("key"))
+    } yield {
+      assert(r1)
+      assertEquals(r2, 9L)
+    }
+  }
+
+  test("sliding window token acquiring") {
+    val limiter = rateLimiter(Strategy.SlidingWindow(5, Window.Hour))
+
+    for {
+      r1 <- toFuture(limiter.acquire("key"))
+      r2 <- toFuture(limiter.permissions("key"))
+    } yield {
+      assert(r1)
+      assertEquals(r2, 4L)
+    }
+  }
+
+  test("token bucket token acquiring") {
+    val limiter = rateLimiter(Strategy.TokenBucket(3, 1, 10 minutes))
+
+    for {
+      r1 <- toFuture(limiter.acquire("key"))
+      r2 <- toFuture(limiter.permissions("key"))
+    } yield {
+      assert(r1)
+      assertEquals(r2, 2L)
+    }
+  }
+
+  test("token bucket token refreshing") {
+    val limiter = rateLimiter(Strategy.TokenBucket(3, 1, 10 seconds))
+
+    val instant = Instant.now()
+
+    for {
+      r1 <- toFuture(limiter.acquire("key", instant))
+      r2 <- toFuture(limiter.acquire("key", instant.plusSeconds(1)))
+      r3 <- toFuture(limiter.acquire("key", instant.plusSeconds(2)))
+      r4 <- toFuture(limiter.acquire("key", instant.plusSeconds(3)))
+      r5 <- toFuture(limiter.permissions("key"))
+      // should refresh bucket and return maxToken - 1
+      r6 <- toFuture(limiter.acquire("key", instant.plusSeconds(30)))
+      r7 <- toFuture(limiter.permissions("key"))
+    } yield {
+      assert(r1)
+      assert(r2)
+      assert(r3)
+      assert(!r4)
+      assertEquals(r5, 0L)
+      assert(r6)
+      assertEquals(r7, 2L)
+    }
+  }
+}
