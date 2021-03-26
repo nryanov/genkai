@@ -2,10 +2,18 @@ package genkai
 
 import java.time.Instant
 
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatest.funsuite.AsyncFunSuite
+import org.scalatest.matchers.should.Matchers
+
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-trait BaseSpec[F[_]] extends munit.FunSuite {
+trait BaseSpec[F[_]]
+    extends AsyncFunSuite
+    with Matchers
+    with BeforeAndAfterAll
+    with BeforeAndAfterEach {
   implicit val ec: ExecutionContext = ExecutionContext.global
 
   def rateLimiter(strategy: Strategy): RateLimiter[F]
@@ -20,7 +28,8 @@ trait BaseSpec[F[_]] extends munit.FunSuite {
       r2 <- toFuture(limiter.permissions("key"))
     } yield {
       assert(r1)
-      assertEquals(r2, 9L)
+      r1 shouldBe true
+      r2 shouldBe 9L
     }
   }
 
@@ -31,8 +40,8 @@ trait BaseSpec[F[_]] extends munit.FunSuite {
       r1 <- toFuture(limiter.acquire("key"))
       r2 <- toFuture(limiter.permissions("key"))
     } yield {
-      assert(r1)
-      assertEquals(r2, 4L)
+      r1 shouldBe true
+      r2 shouldBe 4L
     }
   }
 
@@ -43,8 +52,8 @@ trait BaseSpec[F[_]] extends munit.FunSuite {
       r1 <- toFuture(limiter.acquire("key"))
       r2 <- toFuture(limiter.permissions("key"))
     } yield {
-      assert(r1)
-      assertEquals(r2, 2L)
+      r1 shouldBe true
+      r2 shouldBe 2L
     }
   }
 
@@ -63,13 +72,13 @@ trait BaseSpec[F[_]] extends munit.FunSuite {
       r6 <- toFuture(limiter.acquire("key", instant.plusSeconds(30)))
       r7 <- toFuture(limiter.permissions("key"))
     } yield {
-      assert(r1)
-      assert(r2)
-      assert(r3)
-      assert(!r4)
-      assertEquals(r5, 0L)
-      assert(r6)
-      assertEquals(r7, 2L)
+      r1 shouldBe true
+      r2 shouldBe true
+      r3 shouldBe true
+      r4 shouldBe false
+      r5 shouldBe 0L
+      r6 shouldBe true
+      r7 shouldBe 2L
     }
   }
 }

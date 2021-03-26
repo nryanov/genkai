@@ -15,6 +15,8 @@ object IdMonad extends MonadError[Identity] {
     pf: PartialFunction[Throwable, Throwable]
   ): Identity[A] = fa
 
+  override def mapError[A](fa: Identity[A])(f: Throwable => Throwable): Identity[A] = fa
+
   override def handleError[A](fa: Identity[A])(pf: PartialFunction[Throwable, A]): Identity[A] = fa
 
   override def handleErrorWith[A](fa: Identity[A])(

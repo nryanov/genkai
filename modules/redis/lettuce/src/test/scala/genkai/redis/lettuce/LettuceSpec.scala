@@ -10,13 +10,13 @@ trait LettuceSpec[F[_]] extends RedisSpecForAll[F] {
     redisClient =
       RedisClient.create(s"redis://${redis.containerIpAddress}:${redis.mappedPort(6379)}")
 
-  override def afterAll(): Unit = {
+  override protected def afterAll(): Unit = {
     redisClient.shutdown()
     super.afterAll()
   }
 
-  override def afterEach(context: AfterEach): Unit = {
-    super.afterEach(context)
+  override protected def afterEach(): Unit = {
+    super.afterEach()
     val connection = redisClient.connect()
     try connection.sync().flushall()
     finally connection.close()

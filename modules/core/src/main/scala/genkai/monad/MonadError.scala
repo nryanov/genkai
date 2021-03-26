@@ -13,6 +13,8 @@ trait MonadError[F[_]] {
 
   def adaptError[A](fa: F[A])(pf: PartialFunction[Throwable, Throwable]): F[A]
 
+  def mapError[A](fa: F[A])(f: Throwable => Throwable): F[A]
+
   def handleError[A](fa: F[A])(pf: PartialFunction[Throwable, A]): F[A]
 
   def handleErrorWith[A](fa: F[A])(pf: PartialFunction[Throwable, F[A]]): F[A]

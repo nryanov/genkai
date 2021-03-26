@@ -15,6 +15,9 @@ package object syntax {
     def adaptError(pf: PartialFunction[Throwable, Throwable])(implicit F: MonadError[F]): F[A] =
       F.adaptError(fa)(pf)
 
+    def mapError(f: Throwable => Throwable)(implicit F: MonadError[F]): F[A] =
+      F.mapError(fa)(f)
+
     def guarantee(g: => F[Unit])(implicit F: MonadError[F]): F[A] = F.guarantee(fa)(g)
 
     def void(implicit F: MonadError[F]): F[Unit] = F.void(fa)

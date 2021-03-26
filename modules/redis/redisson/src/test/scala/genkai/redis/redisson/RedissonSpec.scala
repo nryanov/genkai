@@ -18,14 +18,13 @@ trait RedissonSpec[F[_]] extends RedisSpecForAll[F] {
     redisClient = Redisson.create(config)
   }
 
-  override def afterAll(): Unit = {
+  override protected def afterAll(): Unit = {
     redisClient.shutdown()
     super.afterAll()
   }
 
-  override def afterEach(context: AfterEach): Unit = {
-    super.afterEach(context)
-
+  override protected def afterEach(): Unit = {
+    super.afterEach()
     redisClient.getKeys.flushall()
   }
 }

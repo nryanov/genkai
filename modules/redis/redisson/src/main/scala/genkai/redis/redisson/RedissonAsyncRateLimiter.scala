@@ -4,7 +4,7 @@ import java.time.Instant
 import java.util.Collections
 
 import genkai.monad.syntax._
-import genkai.{ClientError, Key, RateLimiter}
+import genkai.{Key, RateLimiter}
 import genkai.redis.RedisStrategy
 import genkai.monad.{MonadAsyncError, MonadError}
 import org.redisson.api.{RFuture, RScript, RedissonClient}
@@ -39,8 +39,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
 
         () => cf.cancel(true)
       }
-      .map(strategy.toPermissions)
-      .adaptError(err => ClientError(err))
+      .map(tokens => strategy.toPermissions(tokens))
   }
 
   override def reset[A: Key](key: A): F[Unit] = {
@@ -56,7 +55,6 @@ abstract class RedissonAsyncRateLimiter[F[_]](
 
         () => cf.cancel(true)
       }
-      .adaptError(err => ClientError(err))
       .void
   }
 
@@ -76,15 +74,12 @@ abstract class RedissonAsyncRateLimiter[F[_]](
 
         () => cf.cancel(true)
       }
-      .adaptError(err => ClientError(err))
-      .map(strategy.isAllowed)
+      .map(tokens => strategy.isAllowed(tokens))
 
-  override def close(): F[Unit] = monad
-    .ifA(monad.pure(closeClient))(
-      monad.eval(client.shutdown()),
-      monad.unit
-    )
-    .adaptError(err => ClientError(err))
+  override def close(): F[Unit] = monad.ifA(monad.pure(closeClient))(
+    monad.eval(client.shutdown()),
+    monad.unit
+  )
 
   override protected def monadError: MonadError[F] = monad
 

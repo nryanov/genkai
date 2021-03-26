@@ -17,6 +17,11 @@ object TryMonad extends MonadError[Try] {
       case _                                               => fa
     }
 
+  override def mapError[A](fa: Try[A])(f: Throwable => Throwable): Try[A] = fa match {
+    case Failure(exception) => raiseError(f(exception))
+    case _                  => fa
+  }
+
   override def handleError[A](fa: Try[A])(pf: PartialFunction[Throwable, A]): Try[A] = fa match {
     case Failure(exception) if pf.isDefinedAt(exception) => eval(pf(exception))
     case _                                               => fa

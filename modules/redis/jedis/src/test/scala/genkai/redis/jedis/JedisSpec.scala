@@ -9,13 +9,13 @@ trait JedisSpec[F[_]] extends RedisSpecForAll[F] {
   override def afterContainersStart(redis: RedisContainer): Unit =
     jedisPool = new JedisPool(redis.containerIpAddress, redis.mappedPort(6379))
 
-  override def afterAll(): Unit = {
+  override protected def afterAll(): Unit = {
     jedisPool.close()
     super.afterAll()
   }
 
-  override def afterEach(context: AfterEach): Unit = {
-    super.afterEach(context)
+  override protected def afterEach(): Unit = {
+    super.afterEach()
     val jedis = jedisPool.getResource
     try jedis.flushAll()
     finally jedis.close()

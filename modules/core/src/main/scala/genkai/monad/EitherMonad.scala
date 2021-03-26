@@ -21,6 +21,14 @@ object EitherMonad extends MonadError[Either[Throwable, *]] {
       case _                                    => fa
     }
 
+  override def mapError[A](
+    fa: Either[Throwable, A]
+  )(f: Throwable => Throwable): Either[Throwable, A] =
+    fa match {
+      case Left(value) => raiseError(f(value))
+      case _           => fa
+    }
+
   override def handleError[A](
     fa: Either[Throwable, A]
   )(pf: PartialFunction[Throwable, A]): Either[Throwable, A] =
@@ -61,9 +69,10 @@ object EitherMonad extends MonadError[Either[Throwable, *]] {
       case Success(value)     => value
     }
 
+    // older scala versions are not supported, so we can assume that either is right-biased
     f match {
-      case Left(value)  => tryE.right.flatMap(_ => Left(value))
-      case Right(value) => tryE.right.map(_ => value)
+      case Left(value)  => tryE.flatMap(_ => Left(value))
+      case Right(value) => tryE.map(_ => value)
     }
   }
 }

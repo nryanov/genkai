@@ -5,7 +5,7 @@ import java.time.Instant
 import genkai.monad.syntax._
 import genkai.monad.MonadError
 import genkai.redis.RedisStrategy
-import genkai.{ClientError, Key, RateLimiter}
+import genkai.{Key, RateLimiter}
 import redis.clients.jedis.{Jedis, JedisPool}
 
 abstract class JedisRateLimiter[F[_]](
@@ -24,8 +24,8 @@ abstract class JedisRateLimiter[F[_]](
       monad
         .eval(client.evalsha(permissionsSha, 1, args: _*))
         .map(_.toString.toLong)
-        .map(strategy.toPermissions)
-    }.adaptError(err => ClientError(err))
+        .map(tokens => strategy.toPermissions(tokens))
+    }
   }
 
   override def reset[A: Key](key: A): F[Unit] = {
@@ -40,8 +40,8 @@ abstract class JedisRateLimiter[F[_]](
       monad
         .eval(client.evalsha(acquireSha, 1, args: _*))
         .map(_.toString.toLong)
-        .map(strategy.isAllowed)
-    }.adaptError(err => ClientError(err))
+        .map(tokens => strategy.isAllowed(tokens))
+    }
 
   override def close(): F[Unit] = monad.whenA(closeClient)(monad.eval(pool.close()))
 

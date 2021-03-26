@@ -3,7 +3,7 @@ package genkai.redis.lettuce
 import java.time.Instant
 
 import genkai.monad.syntax._
-import genkai.{ClientError, Key, RateLimiter}
+import genkai.{Key, RateLimiter}
 import genkai.monad.MonadError
 import genkai.redis.RedisStrategy
 import io.lettuce.core.{RedisClient, ScriptOutputType}
@@ -33,13 +33,12 @@ abstract class LettuceRateLimiter[F[_]](
           strategy.args(now): _*
         )
       )
-      .adaptError(err => ClientError(err))
-      .map(strategy.toPermissions)
+      .map(tokens => strategy.toPermissions(tokens))
   }
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
-    monad.eval(syncCommands.unlink(strategy.key(key, now))).adaptError(err => ClientError(err)).void
+    monad.eval(syncCommands.unlink(strategy.key(key, now))).void
   }
 
   override def acquire[A: Key](key: A, instant: Instant): F[Boolean] =
@@ -52,15 +51,12 @@ abstract class LettuceRateLimiter[F[_]](
           strategy.argsWithTtl(instant): _*
         )
       )
-      .adaptError(err => ClientError(err))
-      .map(strategy.isAllowed)
+      .map(tokens => strategy.isAllowed(tokens))
 
-  override def close(): F[Unit] = monad
-    .ifA(monad.pure(closeClient))(
-      monad.eval(connection.close()).flatMap(_ => monad.eval(client.shutdown())),
-      monad.eval(connection.close())
-    )
-    .adaptError(err => ClientError(err))
+  override def close(): F[Unit] = monad.ifA(monad.pure(closeClient))(
+    monad.eval(connection.close()).flatMap(_ => monad.eval(client.shutdown())),
+    monad.eval(connection.close())
+  )
 
   override protected def monadError: MonadError[F] = monad
 }

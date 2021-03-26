@@ -18,6 +18,11 @@ class FutureMonad(implicit ec: ExecutionContext) extends MonadAsyncError[Future]
       case _                                               => fa
     }
 
+  override def mapError[A](fa: Future[A])(f: Throwable => Throwable): Future[A] = fa.transformWith {
+    case Failure(exception) => raiseError(f(exception))
+    case _                  => fa
+  }
+
   override def handleError[A](fa: Future[A])(pf: PartialFunction[Throwable, A]): Future[A] =
     fa.recover(pf)
 

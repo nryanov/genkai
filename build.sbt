@@ -1,7 +1,7 @@
 lazy val jedisVersion = "3.5.2"
 lazy val lettuceVersion = "6.0.3.RELEASE"
 lazy val redissonVersion = "3.15.1"
-lazy val munitVersion = "0.7.22"
+lazy val scalatestVersion = "3.2.0"
 lazy val scalacheckPlusVersion = "3.2.0.0"
 lazy val scalamockVersion = "5.0.0"
 lazy val scalacheckVersion = "1.14.3"
@@ -63,8 +63,7 @@ lazy val commonSettings = Seq(
   addCompilerPlugin(
     ("org.typelevel" %% "kind-projector" % kindProjectorVersion).cross(CrossVersion.full)
   ),
-  Test / parallelExecution := false,
-  testFrameworks += new TestFramework("munit.Framework")
+  Test / parallelExecution := false
 )
 
 lazy val genkai =
@@ -82,12 +81,11 @@ lazy val core = project
   .settings(
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % slf4jApiVersion,
-      "org.scalameta" %% "munit" % munitVersion % Test,
-      "org.scalameta" %% "munit-scalacheck" % munitVersion % Test,
+      "org.scalatest" %% "scalatest" % scalatestVersion % Test,
+      "org.scalatestplus" %% "scalacheck-1-14" % scalacheckPlusVersion % Test,
       "org.scalamock" %% "scalamock" % scalamockVersion % Test,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
-      "com.dimafeng" %% "testcontainers-scala" % testContainersVersion % Test,
-      "com.dimafeng" %% "testcontainers-scala-munit" % testContainersVersion % Test
+      "com.dimafeng" %% "testcontainers-scala" % testContainersVersion % Test
     )
   )
 
