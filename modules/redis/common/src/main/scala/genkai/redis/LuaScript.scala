@@ -33,7 +33,7 @@ object LuaScript {
       |local refilled = redis.call('HGET', KEYS[1], 'tokens');
       |local value = math.max(0, refilled - 1);
       |redis.call('HSET', KEYS[1], 'tokens', value);
-      |return refilled;     
+      |return tonumber(refilled);     
       |""".stripMargin
 
   /**
@@ -57,7 +57,7 @@ object LuaScript {
       |    local refill = math.min(maxAmount, current[1] + refillAmount * refillTimes);
       |    redis.call('HMSET', KEYS[1], 'tokens', refill, 'lastRefillTime', currentTimestamp);
       |end;
-      |return redis.call('HGET', KEYS[1], 'tokens');     
+      |return tonumber(redis.call('HGET', KEYS[1], 'tokens'));     
       |""".stripMargin
 
   /**
@@ -69,7 +69,7 @@ object LuaScript {
     """
       |local counter = redis.call('INCR', KEYS[1]);
       |redis.call('EXPIRE', KEYS[1], ARGV[1]);
-      |return counter;
+      |return tonumber(counter);
       |""".stripMargin
 
   /**
@@ -79,7 +79,7 @@ object LuaScript {
    */
   val fixedWindowPermissions: String =
     """
-      |return redis.call('GET', KEYS[1]);
+      |return tonumber(redis.call('GET', KEYS[1]));
       |""".stripMargin
 
   /**

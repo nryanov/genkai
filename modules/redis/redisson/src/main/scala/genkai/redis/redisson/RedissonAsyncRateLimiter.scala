@@ -4,10 +4,11 @@ import java.time.Instant
 import java.util.Collections
 
 import genkai.monad.syntax._
-import genkai.{Key, RateLimiter}
+import genkai.{ClientError, Key, RateLimiter}
 import genkai.redis.RedisStrategy
 import genkai.monad.{MonadAsyncError, MonadError}
 import org.redisson.api.{RFuture, RScript, RedissonClient}
+import org.redisson.client.codec.StringCodec
 
 abstract class RedissonAsyncRateLimiter[F[_]](
   client: RedissonClient,
@@ -17,6 +18,9 @@ abstract class RedissonAsyncRateLimiter[F[_]](
   acquireSha: String,
   permissionsSha: String
 ) extends RateLimiter[F] {
+  /* to avoid unnecessary memory allocations */
+  private val scriptCommand: RScript = client.getScript(new StringCodec)
+
   override def permissions[A: Key](key: A): F[Long] = {
     val now = Instant.now()
 
@@ -25,7 +29,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
         val cf = evalShaAsync(
           permissionsSha,
           Collections.singletonList(strategy.key(key, now)),
-          strategy.args(now): _*
+          strategy.args(now)
         )
 
         cf.onComplete { (res: Long, err: Throwable) =>
@@ -36,6 +40,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
         () => cf.cancel(true)
       }
       .map(strategy.toPermissions)
+      .adaptError(err => ClientError(err))
   }
 
   override def reset[A: Key](key: A): F[Unit] = {
@@ -51,6 +56,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
 
         () => cf.cancel(true)
       }
+      .adaptError(err => ClientError(err))
       .void
   }
 
@@ -60,7 +66,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
         val cf = evalShaAsync(
           acquireSha,
           Collections.singletonList(strategy.key(key, instant)),
-          strategy.argsWithTtl(instant): _*
+          strategy.argsWithTtl(instant)
         )
 
         cf.onComplete { (res: Long, err: Throwable) =>
@@ -70,25 +76,28 @@ abstract class RedissonAsyncRateLimiter[F[_]](
 
         () => cf.cancel(true)
       }
+      .adaptError(err => ClientError(err))
       .map(strategy.isAllowed)
 
-  override def close(): F[Unit] = monad.ifA(monad.pure(closeClient))(
-    monad.eval(client.shutdown()),
-    monad.unit
-  )
+  override def close(): F[Unit] = monad
+    .ifA(monad.pure(closeClient))(
+      monad.eval(client.shutdown()),
+      monad.unit
+    )
+    .adaptError(err => ClientError(err))
 
   override protected def monadError: MonadError[F] = monad
 
   private def evalShaAsync(
     sha: String,
     keys: java.util.List[Object],
-    args: Object*
+    args: Seq[String]
   ): RFuture[Long] =
-    client.getScript.evalShaAsync[Long](
+    scriptCommand.evalShaAsync[Long](
       RScript.Mode.READ_WRITE,
       sha,
       RScript.ReturnType.INTEGER,
       keys,
-      args
+      args: _*
     )
 }

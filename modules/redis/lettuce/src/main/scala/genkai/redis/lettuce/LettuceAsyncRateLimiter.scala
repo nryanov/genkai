@@ -3,7 +3,7 @@ package genkai.redis.lettuce
 import java.time.Instant
 
 import genkai.monad.syntax._
-import genkai.{Key, RateLimiter}
+import genkai.{ClientError, Key, RateLimiter}
 import genkai.monad.{MonadAsyncError, MonadError}
 import genkai.redis.RedisStrategy
 import io.lettuce.core.{RedisClient, ScriptOutputType}
@@ -39,18 +39,21 @@ abstract class LettuceAsyncRateLimiter[F[_]](
         () => cf.toCompletableFuture.cancel(true)
       }
       .map(strategy.toPermissions)
+      .adaptError(err => ClientError(err))
   }
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
-    monad.async[Unit] { cb =>
-      val cf = asyncCommands.unlink(strategy.key(key, now)).whenComplete { (_, err: Throwable) =>
-        if (err != null) cb(Left(err))
-        else cb(Right(()))
-      }
+    monad
+      .async[Unit] { cb =>
+        val cf = asyncCommands.unlink(strategy.key(key, now)).whenComplete { (_, err: Throwable) =>
+          if (err != null) cb(Left(err))
+          else cb(Right(()))
+        }
 
-      () => cf.toCompletableFuture.cancel(true)
-    }
+        () => cf.toCompletableFuture.cancel(true)
+      }
+      .adaptError(err => ClientError(err))
   }
 
   override def acquire[A: Key](key: A, instant: Instant): F[Boolean] = monad
@@ -69,27 +72,30 @@ abstract class LettuceAsyncRateLimiter[F[_]](
 
       () => cf.toCompletableFuture.cancel(true)
     }
+    .adaptError(err => ClientError(err))
     .map(strategy.isAllowed)
 
-  override def close(): F[Unit] = monad.ifA(monad.pure(closeClient))(
-    monad.async[Unit] { cb =>
-      val cf = connection.closeAsync().thenCompose(_ => client.shutdownAsync()).whenComplete {
-        (_: Void, err: Throwable) =>
+  override def close(): F[Unit] = monad
+    .ifA(monad.pure(closeClient))(
+      monad.async[Unit] { cb =>
+        val cf = connection.closeAsync().thenCompose(_ => client.shutdownAsync()).whenComplete {
+          (_: Void, err: Throwable) =>
+            if (err != null) cb(Left(err))
+            else cb(Right(()))
+        }
+
+        () => cf.cancel(true)
+      },
+      monad.async[Unit] { cb =>
+        val cf = connection.closeAsync().whenComplete { (_: Void, err: Throwable) =>
           if (err != null) cb(Left(err))
           else cb(Right(()))
-      }
+        }
 
-      () => cf.cancel(true)
-    },
-    monad.async[Unit] { cb =>
-      val cf = connection.closeAsync().whenComplete { (_: Void, err: Throwable) =>
-        if (err != null) cb(Left(err))
-        else cb(Right(()))
+        () => cf.cancel(true)
       }
-
-      () => cf.cancel(true)
-    }
-  )
+    )
+    .adaptError(err => ClientError(err))
 
   override protected def monadError: MonadError[F] = monad
 }
