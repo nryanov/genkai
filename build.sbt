@@ -63,7 +63,8 @@ lazy val commonSettings = Seq(
   addCompilerPlugin(
     ("org.typelevel" %% "kind-projector" % kindProjectorVersion).cross(CrossVersion.full)
   ),
-  Test / parallelExecution := false
+  Test / parallelExecution := false,
+  testFrameworks += new TestFramework("munit.Framework")
 )
 
 lazy val genkai =
@@ -72,7 +73,7 @@ lazy val genkai =
     .settings(moduleName := "genkai")
     .settings(allSettings)
     .settings(noPublish)
-    .aggregate(core)
+    .aggregate(core, redisCommon, jedis, lettuce, redisson)
 
 lazy val core = project
   .in(file("modules/core"))
@@ -87,8 +88,7 @@ lazy val core = project
       "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
       "com.dimafeng" %% "testcontainers-scala" % testContainersVersion % Test,
       "com.dimafeng" %% "testcontainers-scala-munit" % testContainersVersion % Test
-    ),
-    testFrameworks += new TestFramework("munit.Framework")
+    )
   )
 
 lazy val redisCommon = project
