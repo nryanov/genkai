@@ -3,7 +3,7 @@ package genkai.monad
 import scala.util.{Failure, Success, Try}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-class FutureMonad(implicit ec: ExecutionContext) extends MonadAsyncError[Future] {
+class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncError[Future] {
   override def pure[A](value: A): Future[A] = Future.successful(value)
 
   override def map[A, B](fa: Future[A])(f: A => B): Future[B] = fa.map(f)

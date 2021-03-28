@@ -2,7 +2,7 @@ package genkai.monad
 
 import scala.util.{Failure, Success, Try}
 
-object EitherMonad extends MonadError[Either[Throwable, *]] {
+object EitherMonadError extends MonadError[Either[Throwable, *]] {
   override def pure[A](value: A): Either[Throwable, A] = Right(value)
 
   override def map[A, B](fa: Either[Throwable, A])(f: A => B): Either[Throwable, B] = fa.map(f)

@@ -2,7 +2,7 @@ package genkai.monad
 
 import scala.util.{Failure, Success, Try}
 
-object TryMonad extends MonadError[Try] {
+object TryMonadError extends MonadError[Try] {
   override def pure[A](value: A): Try[A] = Try(value)
 
   override def map[A, B](fa: Try[A])(f: A => B): Try[B] = fa.map(f)

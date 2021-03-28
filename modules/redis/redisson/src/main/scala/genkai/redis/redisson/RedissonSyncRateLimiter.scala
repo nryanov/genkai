@@ -1,7 +1,7 @@
 package genkai.redis.redisson
 
 import genkai.{Identity, Strategy}
-import genkai.monad.IdMonad
+import genkai.monad.IdMonadError
 import genkai.redis.RedisStrategy
 import org.redisson.Redisson
 import org.redisson.api.RedissonClient
@@ -15,7 +15,7 @@ class RedissonSyncRateLimiter private (
   permissionsSha: String
 ) extends RedissonRateLimiter[Identity](
       client,
-      IdMonad,
+      IdMonadError,
       strategy,
       closeClient,
       acquireSha,
@@ -27,7 +27,7 @@ object RedissonSyncRateLimiter {
     client: RedissonClient,
     strategy: Strategy
   ): RedissonSyncRateLimiter = {
-    val monad = IdMonad
+    val monad = IdMonadError
     val redisStrategy = RedisStrategy(strategy)
 
     val (acquireSha, permissionsSha) = monad.eval {
@@ -50,7 +50,7 @@ object RedissonSyncRateLimiter {
     config: Config,
     strategy: Strategy
   ): RedissonSyncRateLimiter = {
-    val monad = IdMonad
+    val monad = IdMonadError
 
     val client = Redisson.create(config)
     val redisStrategy = RedisStrategy(strategy)

@@ -37,7 +37,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
           else cb(Right(res))
         }
 
-        () => cf.cancel(true)
+//        () => cf.cancel(true)
       }
       .map(tokens => strategy.toPermissions(tokens))
   }
@@ -53,7 +53,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
           else cb(Right(()))
         }
 
-        () => cf.cancel(true)
+//        () => cf.cancel(true)
       }
       .void
   }
@@ -72,7 +72,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
           else cb(Right(res))
         }
 
-        () => cf.cancel(true)
+//        () => cf.cancel(true)
       }
       .map(tokens => strategy.isAllowed(tokens))
 

@@ -1,6 +1,12 @@
+// backends
 lazy val jedisVersion = "3.5.2"
 lazy val lettuceVersion = "6.0.3.RELEASE"
 lazy val redissonVersion = "3.15.1"
+// effects
+lazy val catsVersion = "2.4.0"
+lazy val zioVersion = "1.0.5"
+lazy val monixVersion = "3.3.0"
+// test
 lazy val scalatestVersion = "3.2.0"
 lazy val scalacheckPlusVersion = "3.2.0.0"
 lazy val scalamockVersion = "5.0.0"
@@ -72,7 +78,25 @@ lazy val genkai =
     .settings(moduleName := "genkai")
     .settings(allSettings)
     .settings(noPublish)
-    .aggregate(core, redisCommon, jedis, lettuce, redisson)
+    .aggregate(
+      core,
+      cats,
+      zio,
+      monix,
+      redisCommon,
+      jedis,
+      jedisCats,
+      jedisZio,
+      jedisMonix,
+      lettuce,
+      lettuceCats,
+      lettuceZio,
+      lettuceMonix,
+      redisson,
+      redissonCats,
+      redissonZio,
+      redissonMonix
+    )
 
 lazy val core = project
   .in(file("modules/core"))
@@ -88,6 +112,40 @@ lazy val core = project
       "com.dimafeng" %% "testcontainers-scala" % testContainersVersion % Test
     )
   )
+
+lazy val cats = project
+  .in(file("modules/effects/cats"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-cats")
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-effect" % catsVersion
+    )
+  )
+  .dependsOn(core % compileAndTest)
+
+lazy val zio = project
+  .in(file("modules/effects/zio"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-zio")
+  .settings(
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % zioVersion,
+      "dev.zio" %% "zio-streams" % zioVersion
+    )
+  )
+  .dependsOn(core % compileAndTest)
+
+lazy val monix = project
+  .in(file("modules/effects/monix"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-monix")
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.monix" %% "monix" % monixVersion
+    )
+  )
+  .dependsOn(core % compileAndTest)
 
 lazy val redisCommon = project
   .in(file("modules/redis/common"))
@@ -106,6 +164,27 @@ lazy val jedis = project
   )
   .dependsOn(redisCommon % compileAndTest)
 
+lazy val jedisCats = project
+  .in(file("modules/redis/jedis/cats"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-jedis-cats")
+  .dependsOn(jedis % compileAndTest)
+  .dependsOn(cats % compileAndTest)
+
+lazy val jedisZio = project
+  .in(file("modules/redis/jedis/zio"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-jedis-zio")
+  .dependsOn(jedis % compileAndTest)
+  .dependsOn(zio % compileAndTest)
+
+lazy val jedisMonix = project
+  .in(file("modules/redis/jedis/monix"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-jedis-monix")
+  .dependsOn(jedis % compileAndTest)
+  .dependsOn(monix % compileAndTest)
+
 lazy val lettuce = project
   .in(file("modules/redis/lettuce"))
   .settings(allSettings)
@@ -117,6 +196,27 @@ lazy val lettuce = project
   )
   .dependsOn(redisCommon % compileAndTest)
 
+lazy val lettuceCats = project
+  .in(file("modules/redis/lettuce/cats"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-lettuce-cats")
+  .dependsOn(lettuce % compileAndTest)
+  .dependsOn(cats % compileAndTest)
+
+lazy val lettuceZio = project
+  .in(file("modules/redis/lettuce/zio"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-lettuce-zio")
+  .dependsOn(lettuce % compileAndTest)
+  .dependsOn(zio % compileAndTest)
+
+lazy val lettuceMonix = project
+  .in(file("modules/redis/lettuce/monix"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-lettuce-monix")
+  .dependsOn(lettuce % compileAndTest)
+  .dependsOn(monix % compileAndTest)
+
 lazy val redisson = project
   .in(file("modules/redis/redisson"))
   .settings(allSettings)
@@ -127,3 +227,24 @@ lazy val redisson = project
     )
   )
   .dependsOn(redisCommon % compileAndTest)
+
+lazy val redissonCats = project
+  .in(file("modules/redis/redisson/cats"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-redisson-cats")
+  .dependsOn(redisson % compileAndTest)
+  .dependsOn(cats % compileAndTest)
+
+lazy val redissonZio = project
+  .in(file("modules/redis/redisson/zio"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-redisson-zio")
+  .dependsOn(redisson % compileAndTest)
+  .dependsOn(zio % compileAndTest)
+
+lazy val redissonMonix = project
+  .in(file("modules/redis/redisson/monix"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-redisson-monix")
+  .dependsOn(redisson % compileAndTest)
+  .dependsOn(monix % compileAndTest)

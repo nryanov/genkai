@@ -1,6 +1,6 @@
 package genkai.redis.jedis
 
-import genkai.monad.IdMonad
+import genkai.monad.IdMonadError
 import genkai.monad.syntax._
 import genkai.{Identity, Strategy}
 import genkai.redis.RedisStrategy
@@ -14,7 +14,7 @@ class JedisSyncRateLimiter private (
   permissionsSha: String
 ) extends JedisRateLimiter[Identity](
       pool,
-      IdMonad,
+      IdMonadError,
       strategy,
       closeClient,
       acquireSha,
@@ -26,7 +26,7 @@ object JedisSyncRateLimiter {
     pool: JedisPool,
     strategy: Strategy
   ): JedisSyncRateLimiter = {
-    implicit val monad = IdMonad
+    implicit val monad = IdMonadError
     val redisStrategy = RedisStrategy(strategy)
 
     val (acquireSha, permissionsSha) = monad.eval(pool.getResource).flatMap { client =>

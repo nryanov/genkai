@@ -1,7 +1,7 @@
 package genkai
 import java.time.Instant
 
-import genkai.monad.{EitherMonad, MonadError}
+import genkai.monad.{EitherMonadError, MonadError}
 
 final class EitherRateLimiter(rateLimiter: RateLimiter[Identity])
     extends RateLimiter[Either[Throwable, *]] {
@@ -16,5 +16,5 @@ final class EitherRateLimiter(rateLimiter: RateLimiter[Identity])
 
   override def close(): Either[Throwable, Unit] = monadError.eval(rateLimiter.close())
 
-  override protected def monadError: MonadError[Either[Throwable, *]] = EitherMonad
+  override protected def monadError: MonadError[Either[Throwable, *]] = EitherMonadError
 }

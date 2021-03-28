@@ -2,7 +2,7 @@ package genkai.monad
 
 import genkai.Identity
 
-object IdMonad extends MonadError[Identity] {
+object IdMonadError extends MonadError[Identity] {
   override def pure[A](value: A): Identity[A] = value
 
   override def map[A, B](fa: Identity[A])(f: A => B): Identity[B] = f(fa)

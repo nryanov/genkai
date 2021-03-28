@@ -1,7 +1,7 @@
 package genkai.redis.redisson
 
 import genkai.Strategy
-import genkai.monad.{FutureMonad, IdMonad}
+import genkai.monad.{FutureMonadAsyncError, IdMonadError}
 import genkai.redis.RedisStrategy
 import org.redisson.Redisson
 import org.redisson.api.RedissonClient
@@ -18,7 +18,7 @@ class RedissonFutureRateLimiter private (
 )(implicit ec: ExecutionContext)
     extends RedissonAsyncRateLimiter[Future](
       client,
-      new FutureMonad(),
+      new FutureMonadAsyncError(),
       strategy,
       closeClient,
       acquireSha,
@@ -32,7 +32,7 @@ object RedissonFutureRateLimiter {
     client: RedissonClient,
     strategy: Strategy
   )(implicit ec: ExecutionContext): RedissonFutureRateLimiter = {
-    val monad = IdMonad
+    val monad = IdMonadError
     val redisStrategy = RedisStrategy(strategy)
 
     val (acquireSha, permissionsSha) = monad.eval {
@@ -56,7 +56,7 @@ object RedissonFutureRateLimiter {
     config: Config,
     strategy: Strategy
   )(implicit ec: ExecutionContext): RedissonFutureRateLimiter = {
-    val monad = IdMonad
+    val monad = IdMonadError
 
     val client = Redisson.create(config)
     val redisStrategy = RedisStrategy(strategy)

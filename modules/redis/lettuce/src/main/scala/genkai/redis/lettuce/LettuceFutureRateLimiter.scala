@@ -1,7 +1,7 @@
 package genkai.redis.lettuce
 
 import genkai.Strategy
-import genkai.monad.{FutureMonad, IdMonad}
+import genkai.monad.{FutureMonadAsyncError, IdMonadError}
 import genkai.redis.RedisStrategy
 import io.lettuce.core.RedisClient
 import io.lettuce.core.api.StatefulRedisConnection
@@ -19,7 +19,7 @@ class LettuceFutureRateLimiter private (
     extends LettuceAsyncRateLimiter[Future](
       client,
       connection,
-      new FutureMonad(),
+      new FutureMonadAsyncError(),
       strategy,
       closeClient,
       acquireSha,
@@ -33,7 +33,7 @@ object LettuceFutureRateLimiter {
     client: RedisClient,
     strategy: Strategy
   )(implicit ec: ExecutionContext): LettuceFutureRateLimiter = {
-    val monad = IdMonad
+    val monad = IdMonadError
     val redisStrategy = RedisStrategy(strategy)
 
     val connection = client.connect()
@@ -60,7 +60,7 @@ object LettuceFutureRateLimiter {
   def apply(redisUri: String, strategy: Strategy)(implicit
     ec: ExecutionContext
   ): LettuceFutureRateLimiter = {
-    val monad = IdMonad
+    val monad = IdMonadError
     val redisStrategy = RedisStrategy(strategy)
 
     val client = RedisClient.create(redisUri)

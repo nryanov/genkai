@@ -36,7 +36,7 @@ abstract class LettuceAsyncRateLimiter[F[_]](
             else cb(Right(result))
           }
 
-        () => cf.toCompletableFuture.cancel(true)
+//        () => cf.toCompletableFuture.cancel(true)
       }
       .map(tokens => strategy.toPermissions(tokens))
   }
@@ -49,7 +49,7 @@ abstract class LettuceAsyncRateLimiter[F[_]](
         else cb(Right(()))
       }
 
-      () => cf.toCompletableFuture.cancel(true)
+//      () => cf.toCompletableFuture.cancel(true)
     }
   }
 
@@ -67,7 +67,7 @@ abstract class LettuceAsyncRateLimiter[F[_]](
           else cb(Right(result))
         }
 
-      () => cf.toCompletableFuture.cancel(true)
+//      () => cf.toCompletableFuture.cancel(true)
     }
     .map(tokens => strategy.isAllowed(tokens))
 
@@ -79,7 +79,7 @@ abstract class LettuceAsyncRateLimiter[F[_]](
           else cb(Right(()))
       }
 
-      () => cf.cancel(true)
+//      () => cf.cancel(true)
     },
     monad.async[Unit] { cb =>
       val cf = connection.closeAsync().whenComplete { (_: Void, err: Throwable) =>
@@ -87,7 +87,7 @@ abstract class LettuceAsyncRateLimiter[F[_]](
         else cb(Right(()))
       }
 
-      () => cf.cancel(true)
+//      () => cf.cancel(true)
     }
   )
 

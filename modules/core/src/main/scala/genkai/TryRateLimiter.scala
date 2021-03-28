@@ -2,7 +2,7 @@ package genkai
 
 import java.time.Instant
 
-import genkai.monad.{MonadError, TryMonad}
+import genkai.monad.{MonadError, TryMonadError}
 
 import scala.util.Try
 
@@ -19,5 +19,5 @@ final class TryRateLimiter(
 
   override def close(): Try[Unit] = monadError.eval(rateLimiter.close())
 
-  override protected def monadError: MonadError[Try] = TryMonad
+  override protected def monadError: MonadError[Try] = TryMonadError
 }

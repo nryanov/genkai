@@ -1,7 +1,7 @@
 package genkai.redis.lettuce
 
 import genkai.{Identity, Strategy}
-import genkai.monad.IdMonad
+import genkai.monad.IdMonadError
 import genkai.redis.RedisStrategy
 import io.lettuce.core.RedisClient
 import io.lettuce.core.api.StatefulRedisConnection
@@ -16,7 +16,7 @@ class LettuceSyncRateLimiter private (
 ) extends LettuceRateLimiter[Identity](
       client,
       connection,
-      IdMonad,
+      IdMonadError,
       strategy,
       closeClient,
       acquireSha,
@@ -28,7 +28,7 @@ object LettuceSyncRateLimiter {
     client: RedisClient,
     strategy: Strategy
   ): LettuceSyncRateLimiter = {
-    val monad = IdMonad
+    val monad = IdMonadError
     val redisStrategy = RedisStrategy(strategy)
 
     val connection = client.connect()
@@ -55,7 +55,7 @@ object LettuceSyncRateLimiter {
     redisUri: String,
     strategy: Strategy
   ): LettuceSyncRateLimiter = {
-    val monad = IdMonad
+    val monad = IdMonadError
     val redisStrategy = RedisStrategy(strategy)
 
     val client = RedisClient.create(redisUri)
