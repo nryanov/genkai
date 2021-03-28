@@ -29,7 +29,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
         val cf = evalShaAsync(
           permissionsSha,
           Collections.singletonList(strategy.key(key, now)),
-          strategy.args(now)
+          strategy.permissionsArgs(now)
         )
 
         cf.onComplete { (res: Long, err: Throwable) =>
@@ -58,13 +58,13 @@ abstract class RedissonAsyncRateLimiter[F[_]](
       .void
   }
 
-  override def acquire[A: Key](key: A, instant: Instant): F[Boolean] =
+  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
     monad
       .async[Long] { cb =>
         val cf = evalShaAsync(
           acquireSha,
           Collections.singletonList(strategy.key(key, instant)),
-          strategy.argsWithTtl(instant)
+          strategy.acquireArgs(instant, cost)
         )
 
         cf.onComplete { (res: Long, err: Throwable) =>

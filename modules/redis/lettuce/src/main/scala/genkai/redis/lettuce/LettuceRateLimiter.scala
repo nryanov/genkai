@@ -30,7 +30,7 @@ abstract class LettuceRateLimiter[F[_]](
           permissionsSha,
           ScriptOutputType.INTEGER,
           Array(strategy.key(key, now)),
-          strategy.args(now): _*
+          strategy.permissionsArgs(now): _*
         )
       )
       .map(tokens => strategy.toPermissions(tokens))
@@ -41,14 +41,14 @@ abstract class LettuceRateLimiter[F[_]](
     monad.eval(syncCommands.unlink(strategy.key(key, now))).void
   }
 
-  override def acquire[A: Key](key: A, instant: Instant): F[Boolean] =
+  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
     monad
       .eval(
         syncCommands.evalsha[Long](
           acquireSha,
           ScriptOutputType.INTEGER,
           Array(strategy.key(key, instant)),
-          strategy.argsWithTtl(instant): _*
+          strategy.acquireArgs(instant, cost): _*
         )
       )
       .map(tokens => strategy.isAllowed(tokens))

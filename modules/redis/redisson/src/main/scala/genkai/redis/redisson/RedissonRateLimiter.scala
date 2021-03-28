@@ -29,7 +29,7 @@ abstract class RedissonRateLimiter[F[_]](
         evalSha(
           permissionsSha,
           Collections.singletonList(strategy.key(key, now)),
-          strategy.args(now)
+          strategy.permissionsArgs(now)
         )
       )
       .map(strategy.toPermissions)
@@ -40,13 +40,13 @@ abstract class RedissonRateLimiter[F[_]](
     monad.eval(client.getKeys.unlink(strategy.key(key, now))).void
   }
 
-  override def acquire[A: Key](key: A, instant: Instant): F[Boolean] =
+  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
     monad
       .eval(
         evalSha(
           acquireSha,
           Collections.singletonList(strategy.key(key, instant)),
-          strategy.argsWithTtl(instant)
+          strategy.acquireArgs(instant, cost)
         )
       )
       .map(strategy.isAllowed)

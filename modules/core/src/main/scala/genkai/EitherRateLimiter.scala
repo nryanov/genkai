@@ -11,8 +11,8 @@ final class EitherRateLimiter(rateLimiter: RateLimiter[Identity])
   override def reset[A: Key](key: A): Either[Throwable, Unit] =
     monadError.eval(rateLimiter.reset(key))
 
-  override def acquire[A: Key](key: A, instant: Instant): Either[Throwable, Boolean] =
-    monadError.eval(rateLimiter.acquire(key, instant))
+  override def acquire[A: Key](key: A, instant: Instant, cost: Long): Either[Throwable, Boolean] =
+    monadError.eval(rateLimiter.acquire(key, instant, cost))
 
   override def close(): Either[Throwable, Unit] = monadError.eval(rateLimiter.close())
 

@@ -14,8 +14,8 @@ final class TryRateLimiter(
 
   override def reset[A: Key](key: A): Try[Unit] = monadError.eval(rateLimiter.reset(key))
 
-  override def acquire[A: Key](key: A, instant: Instant): Try[Boolean] =
-    monadError.eval(rateLimiter.acquire(key, instant))
+  override def acquire[A: Key](key: A, instant: Instant, cost: Long): Try[Boolean] =
+    monadError.eval(rateLimiter.acquire(key, instant, cost))
 
   override def close(): Try[Unit] = monadError.eval(rateLimiter.close())
 

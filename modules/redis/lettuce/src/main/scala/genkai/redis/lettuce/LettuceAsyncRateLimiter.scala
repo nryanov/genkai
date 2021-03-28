@@ -29,7 +29,7 @@ abstract class LettuceAsyncRateLimiter[F[_]](
             permissionsSha,
             ScriptOutputType.INTEGER,
             Array(strategy.key(key, now)),
-            strategy.args(now): _*
+            strategy.permissionsArgs(now): _*
           )
           .whenComplete { (result: Long, err: Throwable) =>
             if (err != null) cb(Left(err))
@@ -53,14 +53,14 @@ abstract class LettuceAsyncRateLimiter[F[_]](
     }
   }
 
-  override def acquire[A: Key](key: A, instant: Instant): F[Boolean] = monad
+  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = monad
     .async[Long] { cb =>
       val cf = asyncCommands
         .evalsha[Long](
           acquireSha,
           ScriptOutputType.INTEGER,
           Array(strategy.key(key, instant)),
-          strategy.argsWithTtl(instant): _*
+          strategy.acquireArgs(instant, cost): _*
         )
         .whenComplete { (result: Long, err: Throwable) =>
           if (err != null) cb(Left(err))

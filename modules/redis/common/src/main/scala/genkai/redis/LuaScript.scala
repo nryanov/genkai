@@ -10,102 +10,133 @@ Scripts will be loaded only once per RateLimiter instance and then executed as a
 object LuaScript {
 
   /**
-   * args: key, maxTokens, current_timestamp, refillAmount, refillTime
+   * args: key, current_timestamp, cost, maxTokens, refillAmount, refillTime
    * key format: token_bucket:<key>
    * hash structure: f1: value, f2: lastRefillTime
-   * @return - unused tokens
+   * @return - 1 if token acquired, 0 - otherwise
    */
   val tokenBucketAcquire: String =
     """
-      |local maxAmount = tonumber(ARGV[1]);
-      |local currentTimestamp = tonumber(ARGV[2]);
-      |local refillAmount = tonumber(ARGV[3]);
-      |local refillTime = tonumber(ARGV[4]);
+      |local currentTimestamp = tonumber(ARGV[1]);
+      |local cost = tonumber(ARGV[2]);
+      |local maxAmount = tonumber(ARGV[3]);
+      |local refillAmount = tonumber(ARGV[4]);
+      |local refillTime = tonumber(ARGV[5]);
       |local isExists = redis.call('EXISTS', KEYS[1]);
+      |
       |if isExists == 0 then redis.call('HMSET', KEYS[1], 'tokens', maxAmount, 'lastRefillTime', currentTimestamp); end;
+      |
       |local current = redis.call('HMGET', KEYS[1], 'tokens', 'lastRefillTime');
       |local lastRefillTime = tonumber(current[2]);
+      |
       |if currentTimestamp - lastRefillTime >= refillTime then 
       |    local refillTimes = math.floor((currentTimestamp - lastRefillTime) / refillTime);
       |    local refill = math.min(maxAmount, current[1] + refillAmount * refillTimes);
       |    redis.call('HMSET', KEYS[1], 'tokens', refill, 'lastRefillTime', currentTimestamp);
       |end;
+      |
       |local refilled = redis.call('HGET', KEYS[1], 'tokens');
-      |local value = math.max(0, refilled - 1);
+      |local value = math.max(0, refilled - cost);
       |redis.call('HSET', KEYS[1], 'tokens', value);
-      |return tonumber(refilled);     
+      |
+      |return (refilled - cost) >= 0 and 1 or 0;     
       |""".stripMargin
 
   /**
-   * args: key, maxTokens, current_timestamp, refillAmount, refillTime
+   * args: key, current_timestamp, maxTokens, refillAmount, refillTime
    * key format: token_bucket:<key>
    * hash structure: f1: value, f2: lastRefillTime
    * @return - unused tokens
    */
   val tokenBucketPermissions: String =
     """
-      |local maxAmount = tonumber(ARGV[1]);
-      |local currentTimestamp = tonumber(ARGV[2]);
+      |local currentTimestamp = tonumber(ARGV[1]);
+      |local maxAmount = tonumber(ARGV[2]);
       |local refillAmount = tonumber(ARGV[3]);
       |local refillTime = tonumber(ARGV[4]);
       |local isExists = redis.call('EXISTS', KEYS[1]);
+      |
       |if isExists == 0 then redis.call('HMSET', KEYS[1], 'tokens', maxAmount, 'lastRefillTime', currentTimestamp); end;
+      |
       |local current = redis.call('HMGET', KEYS[1], 'tokens', 'lastRefillTime');
       |local lastRefillTime = tonumber(current[2]);
+      |
       |if currentTimestamp - lastRefillTime >= refillTime then 
       |    local refillTimes = math.floor((currentTimestamp - lastRefillTime) / refillTime);
       |    local refill = math.min(maxAmount, current[1] + refillAmount * refillTimes);
       |    redis.call('HMSET', KEYS[1], 'tokens', refill, 'lastRefillTime', currentTimestamp);
       |end;
+      |
       |return tonumber(redis.call('HGET', KEYS[1], 'tokens'));     
       |""".stripMargin
 
   /**
-   * args: key, ttl
+   * args: key, maxTokens, ttl
    * key format: fixed_window:<key>:<timestamp> where <timestamp> is truncated to the beginning of the window
-   * @return - acquired permissions
+   * @return - 1 if token acquired, 0 - otherwise
    */
   val fixedWindowAcquire: String =
     """
+      |local maxTokens = tonumber(ARGV[1]);
+      |local ttl = tonumber(ARGV[2]);
       |local counter = redis.call('INCR', KEYS[1]);
-      |redis.call('EXPIRE', KEYS[1], ARGV[1]);
-      |return tonumber(counter);
+      |redis.call('EXPIRE', KEYS[1], ttl);
+      |
+      |return (maxTokens - counter) >= 0 and 1 or 0;
       |""".stripMargin
 
   /**
-   * args: key
+   * args: key, maxTokens
    * key format: fixed_window:<key>:<timestamp> where <timestamp> is truncated to the beginning of the window
-   * @return - acquired permissions
+   * @return - permissions
    */
   val fixedWindowPermissions: String =
     """
-      |return tonumber(redis.call('GET', KEYS[1]));
+      |local maxTokens = tonumber(ARGV[1]);
+      |local current = redis.call('GET', KEYS[1]);
+      |local used = current and tonumber(current) or 0;
+      |
+      |return math.max(0, maxTokens - used);
       |""".stripMargin
 
   /**
-   * input: key, current_timestamp, window, ttl
+   * input: key, current_timestamp, maxTokens, window, ttl
    * key format: sliding_window:<key>
-   * @return - acquired permissions
+   * @return - 1 if token acquired, 0 - otherwise
    */
   val slidingWindowAcquire: String =
     """
-      |local expiredValues = ARGV[1] - ARGV[2];
+      |local currentTimestamp = tonumber(ARGV[1]);
+      |local maxTokens = tonumber(ARGV[2]);
+      |local window = tonumber(ARGV[3]);
+      |local ttl = tonumber(ARGV[4]);
+      |local expiredValues = currentTimestamp - window;
+      |
       |redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, expiredValues);
+      |
+      |redis.call('ZADD', KEYS[1], currentTimestamp, currentTimestamp);
+      |redis.call('EXPIRE', KEYS[1], ttl);
       |local counter = redis.call('ZCARD', KEYS[1]);
-      |redis.call('ZADD', KEYS[1], ARGV[1], ARGV[1]);
-      |redis.call('EXPIRE', KEYS[1], ARGV[3]);
-      |return counter;
+      |
+      |return (maxTokens - counter) >= 0 and 1 or 0;
       |""".stripMargin
 
   /**
-   * input: key, current_timestamp, window
+   * input: key, current_timestamp, maxTokens, window
    * key format: sliding_window:<key>
-   * @return - acquired permissions
+   * @return - permissions
    */
   val slidingWindowPermissions: String =
     """
-      |local expiredValues = ARGV[1] - ARGV[2];
+      |local currentTimestamp = tonumber(ARGV[1]);
+      |local maxTokens = tonumber(ARGV[2]);
+      |local window = tonumber(ARGV[3]);
+      |local expiredValues = currentTimestamp - window;
+      |
       |redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, expiredValues);
-      |return redis.call('ZCARD', KEYS[1]);
+      |
+      |local used = redis.call('ZCARD', KEYS[1]);
+      |
+      |return math.max(0, maxTokens - used);
       |""".stripMargin
 }

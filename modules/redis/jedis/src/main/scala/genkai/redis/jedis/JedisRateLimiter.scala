@@ -19,7 +19,7 @@ abstract class JedisRateLimiter[F[_]](
   override def permissions[A: Key](key: A): F[Long] = {
     val now = Instant.now()
     useClient { client =>
-      val args = strategy.key(key, now) :: strategy.args(now)
+      val args = strategy.key(key, now) :: strategy.permissionsArgs(now)
 
       monad
         .eval(client.evalsha(permissionsSha, 1, args: _*))
@@ -33,9 +33,9 @@ abstract class JedisRateLimiter[F[_]](
     useClient(client => monad.eval(client.unlink(strategy.key(key, now))))
   }
 
-  override def acquire[A: Key](key: A, instant: Instant): F[Boolean] =
+  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
     useClient { client =>
-      val args = strategy.key(key, instant) :: strategy.argsWithTtl(instant)
+      val args = strategy.key(key, instant) :: strategy.acquireArgs(instant, cost)
 
       monad
         .eval(client.evalsha(acquireSha, 1, args: _*))
