@@ -1,27 +1,10 @@
 package genkai.effect.zio
 
-import genkai.monad.MonadAsyncError
 import zio._
+import zio.blocking._
+import genkai.monad.MonadError
 
-final class ZioMonadAsyncError extends MonadAsyncError[Task] {
-  override def async[A](k: (Either[Throwable, A] => Unit) => Unit): Task[A] =
-    Task.effectAsync { cb =>
-      k {
-        case Left(error)  => cb(Task.fail(error))
-        case Right(value) => cb(Task.succeed(value))
-      }
-    }
-
-  override def cancelable[A](k: (Either[Throwable, A] => Unit) => () => Task[Unit]): Task[A] =
-    Task.effectAsyncInterrupt { cb =>
-      val canceler = k {
-        case Left(error)  => cb(Task.fail(error))
-        case Right(value) => cb(Task.succeed(value))
-      }
-
-      Left(canceler().ignore)
-    }
-
+final class ZioMonadError(blocking: Blocking.Service) extends MonadError[Task] {
   override def pure[A](value: A): Task[A] = Task.succeed(value)
 
   override def map[A, B](fa: Task[A])(f: A => B): Task[B] = fa.map(f)
@@ -56,11 +39,12 @@ final class ZioMonadAsyncError extends MonadAsyncError[Task] {
 
   override def void[A](fa: Task[A]): Task[Unit] = fa.unit
 
-  override def eval[A](f: => A): Task[A] = Task.effect(f)
+  override def eval[A](f: => A): Task[A] = blocking.effectBlocking(f)
 
   override def unit: Task[Unit] = Task.unit
 
-  override def suspend[A](fa: => Task[A]): Task[A] = Task.effectSuspend(fa)
+  override def suspend[A](fa: => Task[A]): Task[A] =
+    blocking.blocking(fa)
 
   override def flatten[A](fa: Task[Task[A]]): Task[A] = Task.flatten(fa)
 

@@ -25,7 +25,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
     val now = Instant.now()
 
     monad
-      .async[Long] { cb =>
+      .cancelable[Long] { cb =>
         val cf = evalShaAsync(
           permissionsSha,
           Collections.singletonList(strategy.key(key, now)),
@@ -37,7 +37,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
           else cb(Right(res))
         }
 
-//        () => cf.cancel(true)
+        () => monad.eval(cf.cancel(true))
       }
       .map(tokens => strategy.toPermissions(tokens))
   }
@@ -45,7 +45,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
     monad
-      .async[Unit] { cb =>
+      .cancelable[Unit] { cb =>
         val cf = client.getKeys.unlinkAsync(strategy.key(key, now))
 
         cf.onComplete { (_, err: Throwable) =>
@@ -53,14 +53,14 @@ abstract class RedissonAsyncRateLimiter[F[_]](
           else cb(Right(()))
         }
 
-//        () => cf.cancel(true)
+        () => monad.eval(cf.cancel(true))
       }
       .void
   }
 
   override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
     monad
-      .async[Long] { cb =>
+      .cancelable[Long] { cb =>
         val cf = evalShaAsync(
           acquireSha,
           Collections.singletonList(strategy.key(key, instant)),
@@ -72,7 +72,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
           else cb(Right(res))
         }
 
-//        () => cf.cancel(true)
+        () => monad.eval(cf.cancel(true))
       }
       .map(tokens => strategy.isAllowed(tokens))
 

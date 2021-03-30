@@ -58,6 +58,18 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
     p.future
   }
 
+  // ignore cancel logic
+  override def cancelable[A](k: (Either[Throwable, A] => Unit) => () => Future[Unit]): Future[A] = {
+    val p = Promise[A]()
+
+    k {
+      case Left(value)  => p.failure(value)
+      case Right(value) => p.success(value)
+    }
+
+    p.future
+  }
+
   override def guarantee[A](f: Future[A])(g: => Future[Unit]): Future[A] = {
     val p = Promise[A]()
 

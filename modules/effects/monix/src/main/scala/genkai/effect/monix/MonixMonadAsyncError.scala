@@ -3,13 +3,23 @@ package genkai.effect.monix
 import genkai.monad.MonadAsyncError
 import monix.eval.Task
 
-class MonixMonadAsyncError extends MonadAsyncError[Task] {
+final class MonixMonadAsyncError extends MonadAsyncError[Task] {
   override def async[A](k: (Either[Throwable, A] => Unit) => Unit): Task[A] =
     Task.async { cb =>
       k {
         case left @ Left(_)   => cb(left)
         case right @ Right(_) => cb(right)
       }
+    }
+
+  override def cancelable[A](k: (Either[Throwable, A] => Unit) => () => Task[Unit]): Task[A] =
+    Task.cancelable { cb =>
+      val canceler = k {
+        case left @ Left(_)   => cb(left)
+        case right @ Right(_) => cb(right)
+      }
+
+      canceler()
     }
 
   override def pure[A](value: A): Task[A] = Task.pure(value)

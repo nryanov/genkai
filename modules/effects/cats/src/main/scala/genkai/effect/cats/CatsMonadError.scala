@@ -1,15 +1,10 @@
 package genkai.effect.cats
 
-import cats.effect.Concurrent
-import genkai.monad.MonadAsyncError
+import cats.effect.{Blocker, ContextShift, Sync}
+import genkai.monad.MonadError
 
-final class CatsMonadAsyncError[F[_]](implicit F: Concurrent[F]) extends MonadAsyncError[F] {
-  override def async[A](k: (Either[Throwable, A] => Unit) => Unit): F[A] =
-    F.async(k)
-
-  override def cancelable[A](k: (Either[Throwable, A] => Unit) => () => F[Unit]): F[A] =
-    F.cancelable(k.andThen(_.apply()))
-
+final class CatsMonadError[F[_]: ContextShift](blocker: Blocker)(implicit F: Sync[F])
+    extends MonadError[F] {
   override def pure[A](value: A): F[A] = F.pure(value)
 
   override def map[A, B](fa: F[A])(f: A => B): F[B] = F.map(fa)(f)
@@ -40,11 +35,11 @@ final class CatsMonadAsyncError[F[_]](implicit F: Concurrent[F]) extends MonadAs
 
   override def void[A](fa: F[A]): F[Unit] = F.void(fa)
 
-  override def eval[A](f: => A): F[A] = F.delay(f)
+  override def eval[A](f: => A): F[A] = blocker.delay(f)
 
   override def unit: F[Unit] = F.unit
 
-  override def suspend[A](fa: => F[A]): F[A] = F.defer(fa)
+  override def suspend[A](fa: => F[A]): F[A] = blocker.blockOn(fa)
 
   override def flatten[A](fa: F[F[A]]): F[A] = F.flatten(fa)
 
