@@ -87,7 +87,6 @@ lazy val genkai =
       jedis,
       jedisCats,
       jedisZio,
-      jedisMonix,
       lettuce,
       lettuceCats,
       lettuceZio,
@@ -177,13 +176,6 @@ lazy val jedisZio = project
   .settings(moduleName := "genkai-jedis-zio")
   .dependsOn(jedis % compileAndTest)
   .dependsOn(zio % compileAndTest)
-
-lazy val jedisMonix = project
-  .in(file("modules/redis/jedis/monix"))
-  .settings(allSettings)
-  .settings(moduleName := "genkai-jedis-monix")
-  .dependsOn(jedis % compileAndTest)
-  .dependsOn(monix % compileAndTest)
 
 lazy val lettuce = project
   .in(file("modules/redis/lettuce"))

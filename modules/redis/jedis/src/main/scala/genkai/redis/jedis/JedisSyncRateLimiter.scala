@@ -45,4 +45,30 @@ object JedisSyncRateLimiter {
       permissionsSha = permissionsSha
     )
   }
+
+  def apply(
+    host: String,
+    port: Int,
+    strategy: Strategy
+  ): JedisSyncRateLimiter = {
+    implicit val monad = IdMonadError
+    val redisStrategy = RedisStrategy(strategy)
+    val pool = new JedisPool(host, port)
+
+    val (acquireSha, permissionsSha) = monad.eval(pool.getResource).flatMap { client =>
+      monad.guarantee {
+        (
+          client.scriptLoad(redisStrategy.acquireLuaScript),
+          client.scriptLoad(redisStrategy.permissionsLuaScript)
+        )
+      }(monad.eval(client.close()))
+    }
+    new JedisSyncRateLimiter(
+      pool = pool,
+      strategy = redisStrategy,
+      closeClient = true,
+      acquireSha = acquireSha,
+      permissionsSha = permissionsSha
+    )
+  }
 }
