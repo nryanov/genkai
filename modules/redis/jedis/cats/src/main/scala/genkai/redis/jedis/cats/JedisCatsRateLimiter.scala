@@ -38,10 +38,12 @@ object JedisCatsRateLimiter {
       .eval(pool.getResource)
       .flatMap { client =>
         monad.guarantee {
-          monad.eval(
-            client.scriptLoad(redisStrategy.acquireLuaScript),
-            client.scriptLoad(redisStrategy.permissionsLuaScript)
-          )
+          monad.eval {
+            (
+              client.scriptLoad(redisStrategy.acquireLuaScript),
+              client.scriptLoad(redisStrategy.permissionsLuaScript)
+            )
+          }
         }(monad.eval(client.close()))
       }
       .map { case (acquireSha, permissionsSha) =>
@@ -71,10 +73,12 @@ object JedisCatsRateLimiter {
         pool <- monad.eval(new JedisPool(host, port))
         sha <- monad.eval(pool.getResource).flatMap { client =>
           monad.guarantee {
-            monad.eval(
-              client.scriptLoad(redisStrategy.acquireLuaScript),
-              client.scriptLoad(redisStrategy.permissionsLuaScript)
-            )
+            monad.eval {
+              (
+                client.scriptLoad(redisStrategy.acquireLuaScript),
+                client.scriptLoad(redisStrategy.permissionsLuaScript)
+              )
+            }
           }(monad.eval(client.close()))
         }
       } yield new JedisCatsRateLimiter(

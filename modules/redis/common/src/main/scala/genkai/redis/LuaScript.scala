@@ -15,6 +15,7 @@ object LuaScript {
    * hash structure: f1: value, f2: lastRefillTime
    * @return - 1 if token acquired, 0 - otherwise
    */
+  // todo: do not reduce current token value if cost > available
   val tokenBucketAcquire: String =
     """
       |local currentTimestamp = tonumber(ARGV[1]);

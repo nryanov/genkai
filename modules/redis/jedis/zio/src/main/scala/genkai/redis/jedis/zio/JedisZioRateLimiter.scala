@@ -27,10 +27,12 @@ object JedisZioRateLimiter {
     redisStrategy = RedisStrategy(strategy)
     sha <- monad.eval(pool.getResource).flatMap { client =>
       monad.guarantee {
-        monad.eval(
-          client.scriptLoad(redisStrategy.acquireLuaScript),
-          client.scriptLoad(redisStrategy.permissionsLuaScript)
-        )
+        monad.eval {
+          (
+            client.scriptLoad(redisStrategy.acquireLuaScript),
+            client.scriptLoad(redisStrategy.permissionsLuaScript)
+          )
+        }
       }(monad.eval(client.close()))
     }
   } yield new JedisZioRateLimiter(
@@ -61,10 +63,12 @@ object JedisZioRateLimiter {
         pool <- monad.eval(new JedisPool(host, port))
         sha <- monad.eval(pool.getResource).flatMap { client =>
           monad.guarantee {
-            monad.eval(
-              client.scriptLoad(redisStrategy.acquireLuaScript),
-              client.scriptLoad(redisStrategy.permissionsLuaScript)
-            )
+            monad.eval {
+              (
+                client.scriptLoad(redisStrategy.acquireLuaScript),
+                client.scriptLoad(redisStrategy.permissionsLuaScript)
+              )
+            }
           }(monad.eval(client.close()))
         }
       } yield new JedisZioRateLimiter(
@@ -76,7 +80,7 @@ object JedisZioRateLimiter {
         monad = monad
       )
     } { limiter =>
-      blocking(limiter.close().ignore)
+      blocking(limiter.close().orDie)
     }
 
   def layerFromManaged(
