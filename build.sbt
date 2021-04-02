@@ -21,6 +21,8 @@ val scala2_13 = "2.13.5"
 
 val compileAndTest = "compile->compile;test->test"
 
+parallelExecution in Global := false
+
 lazy val buildSettings = Seq(
   organization := "com.nryanov.genkai",
   scalaVersion := scala2_13,
