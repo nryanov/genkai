@@ -32,9 +32,9 @@ abstract class JedisRateLimiter[F[_]](
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
-    val key = strategy.key(key, now)
+    val keyStr = strategy.key(key, now)
     useClient(client =>
-      debug(s"Reset limits for: $key").flatMap(_ => monad.eval(client.unlink(key)))
+      debug(s"Reset limits for: $keyStr").flatMap(_ => monad.eval(client.unlink(keyStr)))
     )
   }
 
