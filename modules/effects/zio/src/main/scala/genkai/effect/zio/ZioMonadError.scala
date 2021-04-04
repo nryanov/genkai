@@ -11,6 +11,8 @@ final class ZioMonadError(blocking: Blocking.Service) extends MonadError[Task] {
 
   override def flatMap[A, B](fa: Task[A])(f: A => Task[B]): Task[B] = fa.flatMap(f)
 
+  override def tap[A, B](fa: Task[A])(f: A => Task[B]): Task[A] = fa.tap(f)
+
   override def raiseError[A](error: Throwable): Task[A] = Task.fail(error)
 
   override def adaptError[A](fa: Task[A])(pf: PartialFunction[Throwable, Throwable]): Task[A] =

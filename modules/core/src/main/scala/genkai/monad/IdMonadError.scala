@@ -9,6 +9,12 @@ object IdMonadError extends MonadError[Identity] {
 
   override def flatMap[A, B](fa: Identity[A])(f: A => Identity[B]): Identity[B] = f(fa)
 
+  override def tap[A, B](fa: Identity[A])(f: A => Identity[B]): Identity[A] = {
+    val r = fa
+    f(r)
+    r
+  }
+
   override def raiseError[A](error: Throwable): Identity[A] = throw error
 
   override def adaptError[A](fa: Identity[A])(

@@ -6,6 +6,8 @@ package object syntax {
 
     def flatMap[B](f: A => F[B])(implicit F: MonadError[F]): F[B] = F.flatMap(fa)(f)
 
+    def tap[B](f: A => F[B])(implicit F: MonadError[F]): F[A] = F.tap(fa)(f)
+
     def handleError(pf: PartialFunction[Throwable, A])(implicit F: MonadError[F]): F[A] =
       F.handleError(fa)(pf)
 

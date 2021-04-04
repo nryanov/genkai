@@ -9,6 +9,8 @@ trait MonadError[F[_]] {
 
   def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
 
+  def tap[A, B](fa: F[A])(f: A => F[B]): F[A]
+
   def raiseError[A](error: Throwable): F[A]
 
   def adaptError[A](fa: F[A])(pf: PartialFunction[Throwable, Throwable]): F[A]

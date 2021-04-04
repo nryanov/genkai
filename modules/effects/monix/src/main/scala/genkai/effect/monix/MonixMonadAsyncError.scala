@@ -28,6 +28,8 @@ final class MonixMonadAsyncError extends MonadAsyncError[Task] {
 
   override def flatMap[A, B](fa: Task[A])(f: A => Task[B]): Task[B] = fa.flatMap(f)
 
+  override def tap[A, B](fa: Task[A])(f: A => Task[B]): Task[A] = fa.tapEval(f)
+
   override def raiseError[A](error: Throwable): Task[A] = Task.raiseError(error)
 
   override def adaptError[A](fa: Task[A])(pf: PartialFunction[Throwable, Throwable]): Task[A] =

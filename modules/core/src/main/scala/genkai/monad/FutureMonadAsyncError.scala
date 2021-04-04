@@ -10,6 +10,9 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
 
   override def flatMap[A, B](fa: Future[A])(f: A => Future[B]): Future[B] = fa.flatMap(f)
 
+  override def tap[A, B](fa: Future[A])(f: A => Future[B]): Future[A] =
+    fa.flatMap(r => f(r).map(_ => r))
+
   override def raiseError[A](error: Throwable): Future[A] = Future.failed(error)
 
   override def adaptError[A](fa: Future[A])(pf: PartialFunction[Throwable, Throwable]): Future[A] =

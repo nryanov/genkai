@@ -11,6 +11,10 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
     f: A => Either[Throwable, B]
   ): Either[Throwable, B] = fa.flatMap(f)
 
+  override def tap[A, B](fa: Either[Throwable, A])(
+    f: A => Either[Throwable, B]
+  ): Either[Throwable, A] = fa.flatMap(r => f(r).map(_ => r))
+
   override def raiseError[A](error: Throwable): Either[Throwable, A] = Left(error)
 
   override def adaptError[A](

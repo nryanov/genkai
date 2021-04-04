@@ -16,6 +16,8 @@ final class CatsMonadAsyncError[F[_]](implicit F: Concurrent[F]) extends MonadAs
 
   override def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B] = F.flatMap(fa)(f)
 
+  override def tap[A, B](fa: F[A])(f: A => F[B]): F[A] = F.flatTap(fa)(f)
+
   override def raiseError[A](error: Throwable): F[A] = F.raiseError(error)
 
   override def adaptError[A](fa: F[A])(pf: PartialFunction[Throwable, Throwable]): F[A] =

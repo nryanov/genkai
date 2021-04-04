@@ -9,6 +9,8 @@ object TryMonadError extends MonadError[Try] {
 
   override def flatMap[A, B](fa: Try[A])(f: A => Try[B]): Try[B] = fa.flatMap(f)
 
+  override def tap[A, B](fa: Try[A])(f: A => Try[B]): Try[A] = fa.flatMap(r => f(r).map(_ => r))
+
   override def raiseError[A](error: Throwable): Try[A] = Failure(error)
 
   override def adaptError[A](fa: Try[A])(pf: PartialFunction[Throwable, Throwable]): Try[A] =

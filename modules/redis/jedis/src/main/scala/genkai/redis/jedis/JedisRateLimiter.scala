@@ -5,7 +5,7 @@ import java.time.Instant
 import genkai.monad.syntax._
 import genkai.monad.MonadError
 import genkai.redis.RedisStrategy
-import genkai.{Key, RateLimiter}
+import genkai.{Key, Logging, RateLimiter}
 import redis.clients.jedis.{Jedis, JedisPool}
 
 abstract class JedisRateLimiter[F[_]](
@@ -15,35 +15,46 @@ abstract class JedisRateLimiter[F[_]](
   closeClient: Boolean,
   acquireSha: String,
   permissionsSha: String
-) extends RateLimiter[F] {
+) extends RateLimiter[F]
+    with Logging[F] {
   override def permissions[A: Key](key: A): F[Long] = {
     val now = Instant.now()
     useClient { client =>
       val args = strategy.key(key, now) :: strategy.permissionsArgs(now)
 
-      monad
-        .eval(client.evalsha(permissionsSha, 1, args: _*))
-        .map(_.toString.toLong)
-        .map(tokens => strategy.toPermissions(tokens))
+      for {
+        _ <- debug(s"Permissions request: $args")
+        tokens <- monad.eval(client.evalsha(permissionsSha, 1, args: _*))
+        _ <- debug(s"Permissions response: $tokens")
+      } yield strategy.toPermissions(tokens.toString.toLong)
     }
   }
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
-    useClient(client => monad.eval(client.unlink(strategy.key(key, now))))
+    val key = strategy.key(key, now)
+    useClient(client =>
+      debug(s"Reset limits for: $key").flatMap(_ => monad.eval(client.unlink(key)))
+    )
   }
 
   override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
     useClient { client =>
       val args = strategy.key(key, instant) :: strategy.acquireArgs(instant, cost)
 
-      monad
-        .eval(client.evalsha(acquireSha, 1, args: _*))
-        .map(_.toString.toLong)
-        .map(tokens => strategy.isAllowed(tokens))
+      for {
+        _ <- debug(s"Acquire request: $args")
+        tokens <- monad.eval(client.evalsha(acquireSha, 1, args: _*))
+        _ <- debug(s"Acquire response: $tokens")
+      } yield strategy.isAllowed(tokens.toString.toLong)
     }
 
-  override def close(): F[Unit] = monad.whenA(closeClient)(monad.eval(pool.close()))
+  override def close(): F[Unit] =
+    monad.whenA(closeClient)(
+      debug("Close redis connection pool")
+        .flatMap(_ => monad.eval(pool.close()))
+        .tap(_ => debug("Connection pool was closed"))
+    )
 
   override protected def monadError: MonadError[F] = monad
 
