@@ -113,6 +113,23 @@ trait BaseSpec[F[_]]
     }
   }
 
+  test("[SlidingWindow] should not add extra acquiring if limit is reached") {
+    val limiter = rateLimiter(Strategy.SlidingWindow(1, Window.Minute))
+    val instant = Instant.now()
+
+    for {
+      r1 <- toFuture(limiter.acquire("key", instant))
+      r2 <- toFuture(limiter.permissions("key"))
+      r3 <- toFuture(limiter.acquire("key", instant))
+      r4 <- toFuture(limiter.acquire("key", instant.plusSeconds(61)))
+    } yield {
+      r1 shouldBe true
+      r2 shouldBe 0L
+      r3 shouldBe false
+      r4 shouldBe true
+    }
+  }
+
   test("[TokenBucket] should acquire token if cost <= maxTokens") {
     val limiter = rateLimiter(Strategy.TokenBucket(3, 1, 10 minutes))
 
@@ -125,7 +142,9 @@ trait BaseSpec[F[_]]
     }
   }
 
-  test("[TokenBucket] should not acquire token if cost > maxTokens") {
+  test(
+    "[TokenBucket] should not acquire token if cost > maxTokens and should not reduce remaining tokens"
+  ) {
     val limiter = rateLimiter(Strategy.TokenBucket(3, 1, 10 minutes))
 
     for {
@@ -133,7 +152,7 @@ trait BaseSpec[F[_]]
       r2 <- toFuture(limiter.permissions("key"))
     } yield {
       r1 shouldBe false
-      r2 shouldBe 0L
+      r2 shouldBe 3L
     }
   }
 

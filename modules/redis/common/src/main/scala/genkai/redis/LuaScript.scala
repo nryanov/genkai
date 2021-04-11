@@ -15,7 +15,6 @@ object LuaScript {
    * hash structure: f1: value, f2: lastRefillTime
    * @return - 1 if token acquired, 0 - otherwise
    */
-  // todo: do not reduce current token value if cost > available
   val tokenBucketAcquire: String =
     """
       |local currentTimestamp = tonumber(ARGV[1]);
@@ -37,10 +36,13 @@ object LuaScript {
       |end;
       |
       |local refilled = redis.call('HGET', KEYS[1], 'tokens');
-      |local value = math.max(0, refilled - cost);
-      |redis.call('HSET', KEYS[1], 'tokens', value);
-      |
-      |return (refilled - cost) >= 0 and 1 or 0;     
+      |local remaining = refilled - cost
+      |if remaining >= 0 then
+      |    redis.call('HSET', KEYS[1], 'tokens', remaining);
+      |    return 1;
+      |else 
+      |    return 0;
+      |end;  
       |""".stripMargin
 
   /**
@@ -115,11 +117,16 @@ object LuaScript {
       |
       |redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, expiredValues);
       |
-      |redis.call('ZADD', KEYS[1], currentTimestamp, currentTimestamp);
-      |redis.call('EXPIRE', KEYS[1], ttl);
-      |local counter = redis.call('ZCARD', KEYS[1]);
-      |
-      |return (maxTokens - counter) >= 0 and 1 or 0;
+      |local cost = redis.call('ZCARD', KEYS[1]) + 1;
+      |local remaining = maxTokens - cost
+      |if remaining >= 0 then
+      |    redis.call('ZADD', KEYS[1], currentTimestamp, currentTimestamp);
+      |    redis.call('EXPIRE', KEYS[1], ttl);
+      |    return 1;
+      |else 
+      |    redis.call('EXPIRE', KEYS[1], ttl);
+      |    return 0;
+      |end;
       |""".stripMargin
 
   /**
