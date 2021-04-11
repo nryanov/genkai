@@ -25,7 +25,6 @@ abstract class JedisRateLimiter[F[_]](
       for {
         _ <- debug(s"Permissions request: $args")
         tokens <- monad.eval(client.evalsha(permissionsSha, 1, args: _*))
-        _ <- debug(s"Permissions response: $tokens")
       } yield strategy.toPermissions(tokens.toString.toLong)
     }
   }
@@ -45,16 +44,11 @@ abstract class JedisRateLimiter[F[_]](
       for {
         _ <- debug(s"Acquire request: $args")
         tokens <- monad.eval(client.evalsha(acquireSha, 1, args: _*))
-        _ <- debug(s"Acquire response: $tokens")
       } yield strategy.isAllowed(tokens.toString.toLong)
     }
 
   override def close(): F[Unit] =
-    monad.whenA(closeClient)(
-      debug("Close redis connection pool")
-        .flatMap(_ => monad.eval(pool.close()))
-        .tap(_ => debug("Connection pool was closed"))
-    )
+    monad.whenA(closeClient)(monad.eval(pool.close()))
 
   override protected def monadError: MonadError[F] = monad
 
