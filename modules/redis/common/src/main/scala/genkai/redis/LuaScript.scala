@@ -8,6 +8,7 @@ In order to simplify the situation and also to be able to use all client librari
 Scripts will be loaded only once per RateLimiter instance and then executed as an atomic operation.
  */
 object LuaScript {
+  //todo: add cost based logic for fixed and sliding windows
 
   /**
    * args: key, current_timestamp, cost, maxTokens, refillAmount, refillTime
@@ -74,18 +75,26 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * args: key, maxTokens, ttl
+   * args: key, cost, maxTokens, ttl
    * key format: fixed_window:<key>:<timestamp> where <timestamp> is truncated to the beginning of the window
    * @return - 1 if token acquired, 0 - otherwise
    */
   val fixedWindowAcquire: String =
     """
-      |local maxTokens = tonumber(ARGV[1]);
-      |local ttl = tonumber(ARGV[2]);
-      |local counter = redis.call('INCR', KEYS[1]);
-      |redis.call('EXPIRE', KEYS[1], ttl);
+      |local cost = tonumber(ARGV[1]);
+      |local maxTokens = tonumber(ARGV[2]);
+      |local ttl = tonumber(ARGV[3]);
       |
-      |return (maxTokens - counter) >= 0 and 1 or 0;
+      |local current = redis.call('GET', KEYS[1]) or 0;
+      |
+      |if maxTokens - current - cost >= 0 then
+      |    redis.call('INCRBY', KEYS[1], cost);
+      |    redis.call('EXPIRE', KEYS[1], ttl);
+      |    return 1;
+      |else
+      |    redis.call('EXPIRE', KEYS[1], ttl);
+      |    return 0;
+      |end;
       |""".stripMargin
 
   /**

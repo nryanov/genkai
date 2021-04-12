@@ -75,7 +75,8 @@ object RedisStrategy {
 
     override def permissionsArgs(instant: Instant): List[String] = permissionArgsPart
 
-    override def acquireArgs(instant: Instant, cost: Long): List[String] = acquireArgsPart
+    override def acquireArgs(instant: Instant, cost: Long): List[String] =
+      cost.toString :: acquireArgsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 

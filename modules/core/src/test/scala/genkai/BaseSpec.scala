@@ -130,8 +130,13 @@ trait BaseSpec[F[_]]
     }
   }
 
-  test("[TokenBucket] should acquire token if cost <= maxTokens") {
-    val limiter = rateLimiter(Strategy.TokenBucket(3, 1, 10 minutes))
+  for (
+    strategy <- Seq(
+      Strategy.TokenBucket(3, 1, 10 minutes),
+      Strategy.FixedWindow(3, Window.Hour)
+    )
+  ) yield test(s"should acquire token if cost <= maxTokens: $strategy") {
+    val limiter = rateLimiter(strategy)
 
     for {
       r1 <- toFuture(limiter.acquire("key", 3))
@@ -142,19 +147,25 @@ trait BaseSpec[F[_]]
     }
   }
 
-  test(
-    "[TokenBucket] should not acquire token if cost > maxTokens and should not reduce remaining tokens"
-  ) {
-    val limiter = rateLimiter(Strategy.TokenBucket(3, 1, 10 minutes))
+  for (
+    strategy <- Seq(
+      Strategy.TokenBucket(3, 1, 10 minutes),
+      Strategy.FixedWindow(3, Window.Hour)
+    )
+  )
+    yield test(
+      s"should not acquire token if cost > maxTokens and should not reduce remaining tokens: $strategy"
+    ) {
+      val limiter = rateLimiter(strategy)
 
-    for {
-      r1 <- toFuture(limiter.acquire("key", 4))
-      r2 <- toFuture(limiter.permissions("key"))
-    } yield {
-      r1 shouldBe false
-      r2 shouldBe 3L
+      for {
+        r1 <- toFuture(limiter.acquire("key", 4))
+        r2 <- toFuture(limiter.permissions("key"))
+      } yield {
+        r1 shouldBe false
+        r2 shouldBe 3L
+      }
     }
-  }
 
   test("[TokenBucket] should refresh tokens after delay") {
     val limiter = rateLimiter(Strategy.TokenBucket(3, 1, 10 seconds))
