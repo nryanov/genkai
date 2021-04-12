@@ -8,7 +8,6 @@ In order to simplify the situation and also to be able to use all client librari
 Scripts will be loaded only once per RateLimiter instance and then executed as an atomic operation.
  */
 object LuaScript {
-  //todo: add cost based logic for fixed and sliding windows
 
   /**
    * args: key, current_timestamp, cost, maxTokens, refillAmount, refillTime
@@ -112,35 +111,52 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * input: key, current_timestamp, maxTokens, window, ttl
-   * key format: sliding_window:<key>
+   * input: sorted set key, hash key, running sum key, current_timestamp, cost, maxTokens, window, ttl
+   * key format: sliding_window:<key>, sliding_window:hash:<key>, sliding_window:sum:<key>
    * @return - 1 if token acquired, 0 - otherwise
    */
   val slidingWindowAcquire: String =
     """
       |local currentTimestamp = tonumber(ARGV[1]);
-      |local maxTokens = tonumber(ARGV[2]);
-      |local window = tonumber(ARGV[3]);
-      |local ttl = tonumber(ARGV[4]);
+      |local cost = tonumber(ARGV[2]);
+      |local maxTokens = tonumber(ARGV[3]);
+      |local window = tonumber(ARGV[4]);
+      |local ttl = tonumber(ARGV[5]);
       |local expiredValues = currentTimestamp - window;
+      |
+      |local forDelete = redis.call('ZRANGEBYSCORE', KEYS[1], 0, expiredValues);
+      |
+      |for _, key in pairs(forDelete) do
+      |    local savedCost = redis.call('HGET', KEYS[2], key);
+      |    redis.call('DECRBY', KEYS[3], savedCost);
+      |    redis.call('HDEL', KEYS[2], key);
+      |end;
       |
       |redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, expiredValues);
       |
-      |local cost = redis.call('ZCARD', KEYS[1]) + 1;
-      |local remaining = maxTokens - cost
+      |local current = redis.call('GET', KEYS[3]) or 0;
+      |local remaining = maxTokens - (current + cost);
+      |
       |if remaining >= 0 then
       |    redis.call('ZADD', KEYS[1], currentTimestamp, currentTimestamp);
+      |    redis.call('HSET', KEYS[2], currentTimestamp, cost);
+      |    redis.call('INCRBY', KEYS[3], cost);
+      |    
       |    redis.call('EXPIRE', KEYS[1], ttl);
+      |    redis.call('EXPIRE', KEYS[2], ttl);
+      |    redis.call('EXPIRE', KEYS[3], ttl);
       |    return 1;
       |else 
       |    redis.call('EXPIRE', KEYS[1], ttl);
+      |    redis.call('EXPIRE', KEYS[2], ttl);
+      |    redis.call('EXPIRE', KEYS[3], ttl);
       |    return 0;
       |end;
       |""".stripMargin
 
   /**
-   * input: key, current_timestamp, maxTokens, window
-   * key format: sliding_window:<key>
+   * input: sorted set key, hash key, running sum key, current_timestamp, maxTokens, window
+   * key format: sliding_window:<key>, sliding_window:hash:<key>, sliding_window:sum:<key>
    * @return - permissions
    */
   val slidingWindowPermissions: String =
@@ -150,9 +166,17 @@ object LuaScript {
       |local window = tonumber(ARGV[3]);
       |local expiredValues = currentTimestamp - window;
       |
+      |local forDelete = redis.call('ZRANGEBYSCORE', KEYS[1], 0, expiredValues);
+      |
+      |for _, key in pairs(forDelete) do
+      |    local savedCost = redis.call('HGET', KEYS[2], key);
+      |    redis.call('DECRBY', KEYS[3], savedCost);
+      |    redis.call('HDEL', KEYS[2], key);
+      |end;
+      |
       |redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, expiredValues);
       |
-      |local used = redis.call('ZCARD', KEYS[1]);
+      |local used = redis.call('GET', KEYS[3]) or 0;
       |
       |return math.max(0, maxTokens - used);
       |""".stripMargin

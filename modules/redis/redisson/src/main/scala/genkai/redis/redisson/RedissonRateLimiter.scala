@@ -10,6 +10,8 @@ import genkai.redis.RedisStrategy
 import org.redisson.api.{RScript, RedissonClient}
 import org.redisson.client.codec.StringCodec
 
+import scala.collection.JavaConverters._
+
 abstract class RedissonRateLimiter[F[_]](
   client: RedissonClient,
   implicit val monad: MonadError[F],
@@ -25,7 +27,7 @@ abstract class RedissonRateLimiter[F[_]](
   override def permissions[A: Key](key: A): F[Long] = {
     val now = Instant.now()
 
-    val keyStr = strategy.key(key, now)
+    val keyStr = strategy.keys(key, now)
     val args = strategy.permissionsArgs(now)
 
     debug(s"Permissions request ($keyStr): $args") *>
@@ -33,7 +35,7 @@ abstract class RedissonRateLimiter[F[_]](
         .eval(
           evalSha(
             permissionsSha,
-            Collections.singletonList(keyStr),
+            new java.util.LinkedList[Object](keyStr.asJava),
             args
           )
         )
@@ -42,13 +44,13 @@ abstract class RedissonRateLimiter[F[_]](
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
-    val keyStr = strategy.key(key, now)
+    val keyStr = strategy.keys(key, now)
     debug(s"Reset limits for: $keyStr") *>
-      monad.eval(client.getKeys.unlink(keyStr)).void
+      monad.eval(client.getKeys.unlink(keyStr: _*)).void
   }
 
   override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
-    val keyStr = strategy.key(key, instant)
+    val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant, cost)
 
     debug(s"Acquire request ($keyStr): $args") *>
@@ -56,7 +58,7 @@ abstract class RedissonRateLimiter[F[_]](
         .eval(
           evalSha(
             acquireSha,
-            Collections.singletonList(keyStr),
+            new java.util.LinkedList[Object](keyStr.asJava),
             args
           )
         )

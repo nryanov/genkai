@@ -20,30 +20,32 @@ abstract class JedisRateLimiter[F[_]](
   override def permissions[A: Key](key: A): F[Long] = {
     val now = Instant.now()
     useClient { client =>
-      val args = strategy.key(key, now) :: strategy.permissionsArgs(now)
+      val keys = strategy.keys(key, now)
+      val args = keys ::: strategy.permissionsArgs(now)
 
       for {
         _ <- debug(s"Permissions request: $args")
-        tokens <- monad.eval(client.evalsha(permissionsSha, 1, args: _*))
+        tokens <- monad.eval(client.evalsha(permissionsSha, keys.size, args: _*))
       } yield strategy.toPermissions(tokens.toString.toLong)
     }
   }
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
-    val keyStr = strategy.key(key, now)
+    val keyStr = strategy.keys(key, now)
     useClient(client =>
-      debug(s"Reset limits for: $keyStr").flatMap(_ => monad.eval(client.unlink(keyStr)))
+      debug(s"Reset limits for: $keyStr").flatMap(_ => monad.eval(client.unlink(keyStr: _*)))
     )
   }
 
   override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
     useClient { client =>
-      val args = strategy.key(key, instant) :: strategy.acquireArgs(instant, cost)
+      val keys = strategy.keys(key, instant)
+      val args = keys ::: strategy.acquireArgs(instant, cost)
 
       for {
         _ <- debug(s"Acquire request: $args")
-        tokens <- monad.eval(client.evalsha(acquireSha, 1, args: _*))
+        tokens <- monad.eval(client.evalsha(acquireSha, keys.size, args: _*))
       } yield strategy.isAllowed(tokens.toString.toLong)
     }
 

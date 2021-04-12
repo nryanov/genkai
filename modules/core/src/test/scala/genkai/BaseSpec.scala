@@ -133,7 +133,8 @@ trait BaseSpec[F[_]]
   for (
     strategy <- Seq(
       Strategy.TokenBucket(3, 1, 10 minutes),
-      Strategy.FixedWindow(3, Window.Hour)
+      Strategy.FixedWindow(3, Window.Hour),
+      Strategy.SlidingWindow(3, Window.Hour)
     )
   ) yield test(s"should acquire token if cost <= maxTokens: $strategy") {
     val limiter = rateLimiter(strategy)
@@ -150,7 +151,8 @@ trait BaseSpec[F[_]]
   for (
     strategy <- Seq(
       Strategy.TokenBucket(3, 1, 10 minutes),
-      Strategy.FixedWindow(3, Window.Hour)
+      Strategy.FixedWindow(3, Window.Hour),
+      Strategy.SlidingWindow(3, Window.Hour)
     )
   )
     yield test(

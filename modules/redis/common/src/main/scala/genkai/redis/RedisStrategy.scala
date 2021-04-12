@@ -11,7 +11,7 @@ sealed trait RedisStrategy {
 
   def permissionsLuaScript: String
 
-  def key[A: Key](value: A, instant: Instant): String
+  def keys[A: Key](value: A, instant: Instant): List[String]
 
   def permissionsArgs(instant: Instant): List[String]
 
@@ -40,8 +40,8 @@ object RedisStrategy {
 
     override val permissionsLuaScript: String = LuaScript.tokenBucketPermissions
 
-    override def key[A: Key](value: A, instant: Instant): String =
-      s"token_bucket:${Key[A].convert(value)}"
+    override def keys[A: Key](value: A, instant: Instant): List[String] =
+      List(s"token_bucket:${Key[A].convert(value)}")
 
     override def permissionsArgs(instant: Instant): List[String] =
       instant.toEpochMilli.toString :: argsPart
@@ -67,10 +67,10 @@ object RedisStrategy {
 
     override val permissionsLuaScript: String = LuaScript.fixedWindowPermissions
 
-    override def key[A: Key](value: A, instant: Instant): String = {
+    override def keys[A: Key](value: A, instant: Instant): List[String] = {
 
       val ts = instant.truncatedTo(underlying.window.unit).toEpochMilli
-      s"fixed_window:${Key[A].convert(value)}:$ts"
+      List(s"fixed_window:${Key[A].convert(value)}:$ts")
     }
 
     override def permissionsArgs(instant: Instant): List[String] = permissionArgsPart
@@ -97,14 +97,18 @@ object RedisStrategy {
 
     override val permissionsLuaScript: String = LuaScript.slidingWindowPermissions
 
-    override def key[A: Key](value: A, instant: Instant): String =
-      s"sliding_window:${Key[A].convert(value)}"
+    override def keys[A: Key](value: A, instant: Instant): List[String] =
+      List(
+        s"sliding_window:${Key[A].convert(value)}",
+        s"sliding_window:hash:${Key[A].convert(value)}",
+        s"sliding_window:sum:${Key[A].convert(value)}"
+      )
 
     override def permissionsArgs(instant: Instant): List[String] =
       instant.toEpochMilli.toString :: permissionArgsPart
 
     override def acquireArgs(instant: Instant, cost: Long): List[String] =
-      instant.toEpochMilli.toString :: acquireArgsPart
+      instant.toEpochMilli.toString :: cost.toString :: acquireArgsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 

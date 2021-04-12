@@ -25,7 +25,7 @@ abstract class LettuceRateLimiter[F[_]](
   override def permissions[A: Key](key: A): F[Long] = {
     val now = Instant.now()
 
-    val keyStr = strategy.key(key, now)
+    val keyStr = strategy.keys(key, now)
     val args = strategy.permissionsArgs(now)
 
     debug(s"Permissions request ($keyStr): $args") *> monad
@@ -33,7 +33,7 @@ abstract class LettuceRateLimiter[F[_]](
         syncCommands.evalsha[Long](
           permissionsSha,
           ScriptOutputType.INTEGER,
-          Array(keyStr),
+          keyStr.toArray,
           args: _*
         )
       )
@@ -42,14 +42,14 @@ abstract class LettuceRateLimiter[F[_]](
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
-    val keyStr = strategy.key(key, now)
+    val keyStr = strategy.keys(key, now)
     debug(s"Reset limits for: $keyStr") *>
-      monad.eval(syncCommands.unlink(strategy.key(key, now))).void
+      monad.eval(syncCommands.unlink(keyStr: _*)).void
 
   }
 
   override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
-    val keyStr = strategy.key(key, instant)
+    val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant, cost)
 
     debug(s"Acquire request ($keyStr): $args") *> monad
@@ -57,7 +57,7 @@ abstract class LettuceRateLimiter[F[_]](
         syncCommands.evalsha[Long](
           acquireSha,
           ScriptOutputType.INTEGER,
-          Array(keyStr),
+          keyStr.toArray,
           args: _*
         )
       )
