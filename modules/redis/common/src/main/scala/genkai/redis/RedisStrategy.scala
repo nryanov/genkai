@@ -4,21 +4,57 @@ import java.time.Instant
 
 import genkai.{Key, Strategy}
 
+/**
+ * Redis specific wrapper for [[genkai.Strategy]]
+ */
 sealed trait RedisStrategy {
   def underlying: Strategy
 
+  /**
+   * Lua script which will be loaded once per RateLimiter.
+   * Used for acquiring tokens.
+   * For more details see [[genkai.redis.LuaScript]]
+   */
   def acquireLuaScript: String
 
+  /**
+   * Lua script which will be loaded once per RateLimiter.
+   * Used for getting unused permissions.
+   * For more details see [[genkai.redis.LuaScript]]
+   */
   def permissionsLuaScript: String
 
+  /**
+   * @param value - key
+   * @param instant - request time
+   * @tparam A - key type with implicit [[genkai.Key]] type class instance
+   * @return - list of script keys
+   */
   def keys[A: Key](value: A, instant: Instant): List[String]
 
+  /**
+   * @param instant - request time
+   * @return - list of script args
+   */
   def permissionsArgs(instant: Instant): List[String]
 
+  /**
+   * @param instant - request time
+   * @param cost - request cost
+   * @return
+   */
   def acquireArgs(instant: Instant, cost: Long): List[String]
 
+  /**
+   * @param value - returned value after [[genkai.RateLimiter.acquire()]]
+   * @return - true if token was acquired otherwise false
+   */
   def isAllowed(value: Long): Boolean
 
+  /**
+   * @param value - returned value after [[genkai.RateLimiter.permissions()]]
+   * @return - unused permissions
+   */
   def toPermissions(value: Long): Long
 }
 

@@ -5,6 +5,7 @@ import java.time.temporal.{ChronoUnit, TemporalUnit}
 sealed trait Window {
   def unit: TemporalUnit
 
+  /** used as window size and ttl */
   def size: Long
 }
 

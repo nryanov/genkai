@@ -1,5 +1,7 @@
 package genkai.monad
 
+// The idea and some implementations ^_^ were found in the sttp project:
+// ref. https://github.com/softwaremill/sttp-shared/blob/master/core/src/main/scala/sttp/monad/MonadError.scala
 trait MonadError[F[_]] {
   def unit: F[Unit] = pure(())
 

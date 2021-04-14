@@ -2,8 +2,16 @@ package genkai
 
 import java.util.UUID
 
+/**
+ * Type class. Used to generate object id.
+ * @tparam A - key type
+ */
 trait Key[A] { self =>
 
+  /**
+   * @param value - value which will be used as unique (or not) identifier
+   * @return - string representation of id
+   */
   def convert(value: A): String
 
   final def contramap[B](f: B => A): Key[B] = new Key[B] {
