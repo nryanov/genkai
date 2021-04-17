@@ -23,24 +23,18 @@ val compileAndTest = "compile->compile;test->test"
 
 parallelExecution in Global := false
 
-inThisBuild(
-  List(
-    organization := "com.nryanov",
-    homepage := Some(url("https://github.com/nryanov/genkai")),
-    licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
-    developers := List(
-      Developer(
-        "nryanov",
-        "Nikita Ryanov",
-        "ryanov.nikita@gmail.com",
-        url("https://nryanov.com")
-      )
-    )
-  )
-)
-
 lazy val buildSettings = Seq(
   organization := "com.nryanov.genkai",
+  homepage := Some(url("https://github.com/nryanov/genkai")),
+  licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+  developers := List(
+    Developer(
+      "nryanov",
+      "Nikita Ryanov",
+      "ryanov.nikita@gmail.com",
+      url("https://nryanov.com")
+    )
+  ),
   scalaVersion := scala2_13,
   crossScalaVersions := Seq(scala2_12, scala2_13)
 )
