@@ -24,6 +24,7 @@ val compileAndTest = "compile->compile;test->test"
 parallelExecution in Global := false
 
 lazy val buildSettings = Seq(
+  sonatypeProfileName := "com.nryanov",
   organization := "com.nryanov.genkai",
   homepage := Some(url("https://github.com/nryanov/genkai")),
   licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
