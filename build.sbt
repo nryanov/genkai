@@ -3,7 +3,7 @@ lazy val jedisVersion = "3.6.0"
 lazy val lettuceVersion = "6.0.3.RELEASE"
 lazy val redissonVersion = "3.15.4"
 // effects
-lazy val catsVersion = "2.4.0"
+lazy val catsVersion = "2.4.1"
 lazy val zioVersion = "1.0.7"
 lazy val monixVersion = "3.3.0"
 // test
