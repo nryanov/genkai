@@ -1,6 +1,6 @@
 // backends
+lazy val lettuceVersion = "6.0.4.RELEASE"
 lazy val jedisVersion = "3.6.0"
-lazy val lettuceVersion = "6.0.3.RELEASE"
 lazy val redissonVersion = "3.15.4"
 // effects
 lazy val catsVersion = "2.4.1"
