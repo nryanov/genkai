@@ -1,15 +1,15 @@
 // backends
+lazy val lettuceVersion = "6.0.4.RELEASE"
 lazy val jedisVersion = "3.6.0"
-lazy val lettuceVersion = "6.0.3.RELEASE"
 lazy val redissonVersion = "3.15.4"
 // effects
-lazy val catsVersion = "2.4.0"
+lazy val catsVersion = "2.4.1"
 lazy val zioVersion = "1.0.7"
 lazy val monixVersion = "3.3.0"
 // test
 lazy val scalatestVersion = "3.2.8"
+lazy val scalamockVersion = "5.1.0"
 lazy val scalacheckPlusVersion = "3.2.2.0"
-lazy val scalamockVersion = "5.0.0"
 lazy val scalacheckVersion = "1.14.3"
 lazy val testContainersVersion = "0.39.3"
 lazy val logbackVersion = "1.2.3"
