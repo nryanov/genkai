@@ -9,7 +9,7 @@ lazy val monixVersion = "3.3.0"
 // test
 lazy val scalatestVersion = "3.2.0"
 lazy val scalacheckPlusVersion = "3.2.0.0"
-lazy val scalamockVersion = "5.0.0"
+lazy val scalamockVersion = "5.1.0"
 lazy val scalacheckVersion = "1.14.3"
 lazy val testContainersVersion = "0.39.1"
 lazy val logbackVersion = "1.2.3"
