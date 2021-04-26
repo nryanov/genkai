@@ -1,6 +1,6 @@
 package genkai.redis.redisson.cats
 
-import cats.effect.{Blocker, ContextShift, Resource, Sync}
+import cats.effect.{Resource, Sync}
 import genkai.Strategy
 import genkai.monad.syntax._
 import genkai.effect.cats.CatsMonadError
@@ -29,9 +29,7 @@ class RedissonCatsRateLimiter[F[_]: Sync: ContextShift] private (
 object RedissonCatsRateLimiter {
   def useClient[F[_]: Sync: ContextShift](
     client: RedissonClient,
-    strategy: Strategy,
-    blocker: Blocker
-  ): F[RedissonCatsRateLimiter[F]] = {
+    strategy: Strategy): F[RedissonCatsRateLimiter[F]] = {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F](blocker)
 
     val redisStrategy = RedisStrategy(strategy)
@@ -55,9 +53,7 @@ object RedissonCatsRateLimiter {
 
   def resource[F[_]: Sync: ContextShift](
     config: Config,
-    strategy: Strategy,
-    blocker: Blocker
-  ): Resource[F, RedissonCatsRateLimiter[F]] = {
+    strategy: Strategy): Resource[F, RedissonCatsRateLimiter[F]] = {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F](blocker)
 
     val redisStrategy = RedisStrategy(strategy)
