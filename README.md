@@ -19,7 +19,7 @@ Available Redis clients:
 - [Redisson](https://github.com/redisson/redisson)  
 
 ## Effects
-The main structure and some abstractions are similar to [sttp](https://github.com/softwaremill/sttp). If you familiar with it than you should be comfortable with this library too :) 
+The main structure and some abstractions are similar to [sttp](https://github.com/softwaremill/sttp). If you familiar with it then you should be comfortable with this library too :) 
 
 There are integrations for [Monix](https://monix.io), [cats-effect](https://github.com/typelevel/cats-effect) and [ZIO](https://github.com/zio/zio).
 
