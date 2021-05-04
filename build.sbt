@@ -2,6 +2,7 @@
 lazy val jedisVersion = "3.5.2"
 lazy val lettuceVersion = "6.0.3.RELEASE"
 lazy val redissonVersion = "3.15.1"
+lazy val aerospikeClientVersion = "5.1.0"
 // effects
 lazy val catsVersion = "2.4.0"
 lazy val zioVersion = "1.0.5"
@@ -252,3 +253,14 @@ lazy val redissonMonix = project
   .settings(moduleName := "genkai-redisson-monix")
   .dependsOn(redisson % compileAndTest)
   .dependsOn(monix % compileAndTest)
+
+lazy val aerospike = project
+  .in(file("modules/aerospike"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-aerospike")
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.aerospike" % "aerospike-client" % aerospikeClientVersion
+    )
+  )
+  .dependsOn(core % compileAndTest)
