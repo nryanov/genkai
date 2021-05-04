@@ -1,3 +1,4 @@
+lazy val kindProjectorVersion = "0.11.3"
 // backends
 lazy val lettuceVersion = "6.1.1.RELEASE"
 lazy val jedisVersion = "3.6.0"
@@ -7,6 +8,8 @@ lazy val aerospikeClientVersion = "5.1.0"
 lazy val catsVersion = "2.5.0"
 lazy val zioVersion = "1.0.7"
 lazy val monixVersion = "3.3.0"
+// logging
+lazy val slf4jApiVersion = "1.7.30"
 // test
 lazy val scalatestVersion = "3.2.8"
 lazy val scalamockVersion = "5.1.0"
@@ -14,8 +17,6 @@ lazy val scalacheckPlusVersion = "3.2.2.0"
 lazy val scalacheckVersion = "1.14.3"
 lazy val testContainersVersion = "0.39.3"
 lazy val logbackVersion = "1.2.3"
-lazy val kindProjectorVersion = "0.11.3"
-lazy val slf4jApiVersion = "1.7.30"
 
 val scala2_12 = "2.12.13"
 val scala2_13 = "2.13.5"
@@ -265,3 +266,17 @@ lazy val aerospike = project
     )
   )
   .dependsOn(core % compileAndTest)
+
+lazy val aerospikeCats = project
+  .in(file("modules/aerospike/cats"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-aerospike-cats")
+  .dependsOn(aerospike % compileAndTest)
+  .dependsOn(cats % compileAndTest)
+
+lazy val aerospikeZio = project
+  .in(file("modules/aerospike/zio"))
+  .settings(allSettings)
+  .settings(moduleName := "genkai-aerospike-zio")
+  .dependsOn(aerospike % compileAndTest)
+  .dependsOn(zio % compileAndTest)
