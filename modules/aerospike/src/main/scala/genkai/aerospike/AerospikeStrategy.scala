@@ -2,8 +2,8 @@ package genkai.aerospike
 
 import java.time.Instant
 
-import genkai.{Key, Strategy}
-import com.aerospike.client.{Key => AKey, Value}
+import genkai.{Key, Strategy, Window}
+import com.aerospike.client.{Value, Key => AKey}
 
 /**
  * Aerospike specific wrapper for [[genkai.Strategy]]
@@ -74,10 +74,9 @@ sealed trait AerospikeStrategy {
 
 object AerospikeStrategy {
   def apply(strategy: Strategy): AerospikeStrategy = strategy match {
-    case inst: Strategy.TokenBucket => AerospikeTokenBucket(inst)
-    case inst: Strategy.FixedWindow => AerospikeFixedWindow(inst)
-    case _: Strategy.SlidingWindow =>
-      throw new NotImplementedError("Sliding window is not implemented yet for aerospike backend")
+    case inst: Strategy.TokenBucket   => AerospikeTokenBucket(inst)
+    case inst: Strategy.FixedWindow   => AerospikeFixedWindow(inst)
+    case inst: Strategy.SlidingWindow => AerospikeSlidingWindow(inst)
   }
 
   final case class AerospikeTokenBucket(underlying: Strategy.TokenBucket)
@@ -136,16 +135,53 @@ object AerospikeStrategy {
 
     override val permissionsFunction: String = "permissions"
 
-    override def key[A: Key](namespace: String, value: A, instant: Instant): AKey = {
-      val ts = instant.truncatedTo(underlying.window.unit).toEpochMilli
-      val key = s"${Key[A].convert(value)}:$ts"
-      new AKey(namespace, setName, key)
-    }
+    override def key[A: Key](namespace: String, value: A, instant: Instant): AKey =
+      new AKey(namespace, setName, Key[A].convert(value))
 
     override def permissionsArgs(instant: Instant): List[Value] = permissionArgsPart
 
     override def acquireArgs(instant: Instant, cost: Long): List[Value] =
-      Value.get(cost) :: acquireArgsPart
+      Value.get(instant.toEpochMilli) :: Value.get(cost) :: acquireArgsPart
+
+    override def isAllowed(value: Long): Boolean = value != 0
+
+    override def toPermissions(value: Long): Long = value
+  }
+
+  final case class AerospikeSlidingWindow(underlying: Strategy.SlidingWindow)
+      extends AerospikeStrategy {
+    private val setName: String = "sliding_window_set"
+    private val precision = underlying.window match {
+      case Window.Second => 1
+      case Window.Minute => 60 // 1 minute -> 60 buckets (~ seconds)
+      case Window.Hour   => 60 // 1 hour -> 60 buckets (~ minutes)
+      case Window.Day    => 24 // 1 day -> 24 buckets (~ hours)
+    }
+
+    private val argsPart =
+      List(
+        Value.get(underlying.tokens),
+        Value.get(underlying.window.size),
+        Value.get(precision)
+      )
+
+    override val luaScript: String = LuaScript.fixedWindow
+
+    override val serverPath: String = "sliding_window.lua"
+
+    override val packageName: String = "sliding_window"
+
+    override val acquireFunction: String = "acquire"
+
+    override val permissionsFunction: String = "permissions"
+
+    override def key[A: Key](namespace: String, value: A, instant: Instant): AKey =
+      new AKey(namespace, setName, Key[A].convert(value))
+
+    override def permissionsArgs(instant: Instant): List[Value] = argsPart
+
+    override def acquireArgs(instant: Instant, cost: Long): List[Value] =
+      Value.get(instant.toEpochMilli) :: Value.get(cost) :: argsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 
