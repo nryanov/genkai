@@ -109,7 +109,10 @@ lazy val genkai =
       redisson,
       redissonCats,
       redissonZio,
-      redissonMonix
+      redissonMonix,
+      aerospike,
+      aerospikeCats,
+      aerospikeZio
     )
 
 lazy val core = project
