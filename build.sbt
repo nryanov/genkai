@@ -1,18 +1,18 @@
 // backends
-lazy val jedisVersion = "3.5.2"
-lazy val lettuceVersion = "6.0.3.RELEASE"
-lazy val redissonVersion = "3.15.1"
+lazy val lettuceVersion = "6.1.1.RELEASE"
+lazy val jedisVersion = "3.6.0"
+lazy val redissonVersion = "3.15.4"
 lazy val aerospikeClientVersion = "5.1.0"
 // effects
-lazy val catsVersion = "2.4.0"
-lazy val zioVersion = "1.0.5"
+lazy val catsVersion = "2.5.0"
+lazy val zioVersion = "1.0.7"
 lazy val monixVersion = "3.3.0"
 // test
-lazy val scalatestVersion = "3.2.0"
-lazy val scalacheckPlusVersion = "3.2.0.0"
-lazy val scalamockVersion = "5.0.0"
+lazy val scalatestVersion = "3.2.8"
+lazy val scalamockVersion = "5.1.0"
+lazy val scalacheckPlusVersion = "3.2.2.0"
 lazy val scalacheckVersion = "1.14.3"
-lazy val testContainersVersion = "0.39.1"
+lazy val testContainersVersion = "0.39.3"
 lazy val logbackVersion = "1.2.3"
 lazy val kindProjectorVersion = "0.11.3"
 lazy val slf4jApiVersion = "1.7.30"
@@ -25,6 +25,7 @@ val compileAndTest = "compile->compile;test->test"
 parallelExecution in Global := false
 
 lazy val buildSettings = Seq(
+  sonatypeProfileName := "com.nryanov",
   organization := "com.nryanov.genkai",
   homepage := Some(url("https://github.com/nryanov/genkai")),
   licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
