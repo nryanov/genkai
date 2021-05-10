@@ -2,7 +2,7 @@ package genkai.redis
 
 import java.time.Instant
 
-import genkai.{Key, Strategy}
+import genkai.{Key, Strategy, Window}
 
 /**
  * Redis specific wrapper for [[genkai.Strategy]]
@@ -120,13 +120,25 @@ object RedisStrategy {
   }
 
   final case class RedisSlidingWindow(underlying: Strategy.SlidingWindow) extends RedisStrategy {
+    private val precision = underlying.window match {
+      case Window.Second => 1
+      case Window.Minute => 60 // 1 minute -> 60 buckets (~ seconds)
+      case Window.Hour   => 60 // 1 hour -> 60 buckets (~ minutes)
+      case Window.Day    => 24 // 1 day -> 24 buckets (~ hours)
+    }
+
     private val permissionArgsPart =
-      List(underlying.tokens.toString, underlying.window.size.toString)
+      List(
+        underlying.tokens.toString, // maxTokens
+        underlying.window.size.toString, // windowSize
+        precision.toString // precision
+      )
     private val acquireArgsPart =
       List(
-        underlying.tokens.toString,
-        underlying.window.size.toString,
-        underlying.window.size.toString
+        underlying.tokens.toString, // maxTokens
+        underlying.window.size.toString, // windowSize
+        precision.toString, // precision
+        underlying.window.size.toString // ttl
       )
 
     override val acquireLuaScript: String = LuaScript.slidingWindowAcquire
@@ -134,11 +146,7 @@ object RedisStrategy {
     override val permissionsLuaScript: String = LuaScript.slidingWindowPermissions
 
     override def keys[A: Key](value: A, instant: Instant): List[String] =
-      List(
-        s"sliding_window:${Key[A].convert(value)}",
-        s"sliding_window:hash:${Key[A].convert(value)}",
-        s"sliding_window:sum:${Key[A].convert(value)}"
-      )
+      List(s"sliding_window:${Key[A].convert(value)}")
 
     override def permissionsArgs(instant: Instant): List[String] =
       instant.toEpochMilli.toString :: permissionArgsPart
