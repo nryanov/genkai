@@ -136,6 +136,8 @@ object LuaScript {
       |    for key, _ in pairs(deletion) do
       |      r[key] = nil
       |    end
+      |    r[saved.countKey] = r[saved.countKey] - decrement
+      |    cur = r[saved.countKey]
       |  else
       |    cur = r[saved.countKey]
       |  end
