@@ -28,13 +28,20 @@ object LuaScript {
       |  redis.call('HMSET', KEYS[1], 'tokens', maxAmount, 'lastRefillTime', currentTimestamp)
       |end
       |
+      |local hw = tonumber(redis.call('HGET', KEYS[1], 'hw') or currentTimestamp)
+      |if currentTimestamp < hw then
+      |  return 0
+      |end
+      |
+      |redis.call('HSET', KEYS[1], 'hw', currentTimestamp)
+      |
       |local current = redis.call('HMGET', KEYS[1], 'tokens', 'lastRefillTime')
       |local lastRefillTime = tonumber(current[2])
       |
       |if currentTimestamp - lastRefillTime >= refillTime then 
       |    local refillTimes = math.floor((currentTimestamp - lastRefillTime) / refillTime)
       |    local refill = math.min(maxAmount, current[1] + refillAmount * refillTimes)
-      |    redis.call('HMSET', KEYS[1], 'tokens', refill, 'lastRefillTime', currentTimestamp)
+      |    redis.call('HSET', KEYS[1], 'tokens', refill, 'lastRefillTime', currentTimestamp)
       |end
       |
       |local refilled = redis.call('HGET', KEYS[1], 'tokens')
@@ -78,20 +85,33 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * args: key, cost, maxTokens, ttl
+   * args: key, windowTs, cost, maxTokens, ttl
    * key format: fixed_window:<key>:<timestamp> where <timestamp> is truncated to the beginning of the window
    * @return - 1 if token acquired, 0 - otherwise
    */
   val fixedWindowAcquire: String =
     """
-      |local cost = tonumber(ARGV[1])
-      |local maxTokens = tonumber(ARGV[2])
-      |local ttl = tonumber(ARGV[3])
+      |local windowStartTs = tonumber(ARGV[1])
+      |local cost = tonumber(ARGV[2])
+      |local maxTokens = tonumber(ARGV[3])
+      |local ttl = tonumber(ARGV[4])
       |
-      |local current = redis.call('GET', KEYS[1]) or 0
+      |local isExists = redis.call('EXISTS', KEYS[1])
+      |
+      |if isExists == 0 then 
+      |  redis.call('HMSET', KEYS[1], 'usedTokens', 0, 'hw', windowStartTs)
+      |end
+      |
+      |local hw = tonumber(redis.call('HGET', KEYS[1], 'hw'))
+      |
+      |if windowStartTs < hw then
+      |  return 0
+      |end
+      |
+      |local current = redis.call('HGET', KEYS[1], 'usedTokens')
       |
       |if maxTokens - current - cost >= 0 then
-      |    redis.call('INCRBY', KEYS[1], cost)
+      |    redis.call('HINCRBY', KEYS[1], 'usedTokens', cost)
       |    redis.call('EXPIRE', KEYS[1], ttl)
       |    return 1
       |else
@@ -108,10 +128,15 @@ object LuaScript {
   val fixedWindowPermissions: String =
     """
       |local maxTokens = tonumber(ARGV[1])
-      |local current = redis.call('GET', KEYS[1])
-      |local used = current and tonumber(current) or 0
+      |local isExists = redis.call('EXISTS', KEYS[1])
       |
-      |return math.max(0, maxTokens - used)
+      |if isExists == 0 then 
+      |  return maxTokens
+      |else
+      |  local used = redis.call('HGET', KEYS[1], 'usedTokens')
+      |  used = used and tonumber(used) or 0
+      |  return math.max(0, maxTokens - used)
+      |end
       |""".stripMargin
 
   /**

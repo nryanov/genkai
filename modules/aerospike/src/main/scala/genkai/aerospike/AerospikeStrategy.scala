@@ -140,8 +140,10 @@ object AerospikeStrategy {
 
     override def permissionsArgs(instant: Instant): List[Value] = permissionArgsPart
 
-    override def acquireArgs(instant: Instant, cost: Long): List[Value] =
-      Value.get(instant.toEpochMilli) :: Value.get(cost) :: acquireArgsPart
+    override def acquireArgs(instant: Instant, cost: Long): List[Value] = {
+      val windowStartTs = instant.truncatedTo(underlying.window.unit).toEpochMilli
+      Value.get(windowStartTs) :: Value.get(cost) :: acquireArgsPart
+    }
 
     override def isAllowed(value: Long): Boolean = value != 0
 

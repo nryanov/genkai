@@ -8,12 +8,14 @@ object LuaScript {
     """
       |local currentTokensBin = 'tokens'
       |local lastRefillTimeBin = 'refillTime'
+      |local highWatermarkBin = 'hw'
       |
       |local function createIfNotExists(r, currentTimestamp, maxTokens)
       |  if not aerospike:exists(r) then 
       |    aerospike:create(r)
       |    r[currentTokensBin] = maxTokens
       |    r[lastRefillTimeBin] = currentTimestamp    
+      |    r[highWatermarkBin] = currentTimestamp
       |  end
       |end
       |
@@ -31,6 +33,14 @@ object LuaScript {
       |
       |function acquire(r, currentTimestamp, cost, maxTokens, refillAmount, refillTime)
       |  createIfNotExists(r, currentTimestamp, maxTokens)
+      |  
+      |  local hw = r[highWatermarkBin]
+      |  
+      |  if currentTimestamp < hw then
+      |    aerospike:update(r)
+      |    return 0
+      |  end
+      |  
       |  refill(r, currentTimestamp, maxTokens, refillAmount, refillTime)
       |  
       |  local current = r[currentTokensBin]

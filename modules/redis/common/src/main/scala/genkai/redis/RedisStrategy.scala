@@ -103,16 +103,15 @@ object RedisStrategy {
 
     override val permissionsLuaScript: String = LuaScript.fixedWindowPermissions
 
-    override def keys[A: Key](value: A, instant: Instant): List[String] = {
-
-      val ts = instant.truncatedTo(underlying.window.unit).toEpochMilli
-      List(s"fixed_window:${Key[A].convert(value)}:$ts")
-    }
+    override def keys[A: Key](value: A, instant: Instant): List[String] =
+      List(s"fixed_window:${Key[A].convert(value)}")
 
     override def permissionsArgs(instant: Instant): List[String] = permissionArgsPart
 
-    override def acquireArgs(instant: Instant, cost: Long): List[String] =
-      cost.toString :: acquireArgsPart
+    override def acquireArgs(instant: Instant, cost: Long): List[String] = {
+      val windowStartTs = instant.truncatedTo(underlying.window.unit).toEpochMilli.toString
+      windowStartTs :: cost.toString :: acquireArgsPart
+    }
 
     override def isAllowed(value: Long): Boolean = value != 0
 
