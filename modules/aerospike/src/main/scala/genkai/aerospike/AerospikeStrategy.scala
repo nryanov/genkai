@@ -86,7 +86,7 @@ object AerospikeStrategy {
     private val argsPart = List(
       Value.get(underlying.tokens),
       Value.get(underlying.refillAmount),
-      Value.get(underlying.refillDelay.toMillis)
+      Value.get(underlying.refillDelay.toSeconds)
     )
 
     override val luaScript: String = LuaScript.tokenBucket
@@ -103,10 +103,10 @@ object AerospikeStrategy {
       new AKey(namespace, setName, Key[A].convert(value))
 
     override def permissionsArgs(instant: Instant): List[Value] =
-      Value.get(instant.toEpochMilli) :: argsPart
+      Value.get(instant.getEpochSecond) :: argsPart
 
     override def acquireArgs(instant: Instant, cost: Long): List[Value] =
-      Value.get(instant.toEpochMilli) :: Value.get(cost) :: argsPart
+      Value.get(instant.getEpochSecond) :: Value.get(cost) :: argsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 
@@ -141,7 +141,7 @@ object AerospikeStrategy {
     override def permissionsArgs(instant: Instant): List[Value] = permissionArgsPart
 
     override def acquireArgs(instant: Instant, cost: Long): List[Value] = {
-      val windowStartTs = instant.truncatedTo(underlying.window.unit).toEpochMilli
+      val windowStartTs = instant.truncatedTo(underlying.window.unit).getEpochSecond
       Value.get(windowStartTs) :: Value.get(cost) :: acquireArgsPart
     }
 
@@ -183,7 +183,7 @@ object AerospikeStrategy {
     override def permissionsArgs(instant: Instant): List[Value] = argsPart
 
     override def acquireArgs(instant: Instant, cost: Long): List[Value] =
-      Value.get(instant.toEpochMilli) :: Value.get(cost) :: argsPart
+      Value.get(instant.getEpochSecond) :: Value.get(cost) :: argsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 
