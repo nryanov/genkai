@@ -1,6 +1,6 @@
 lazy val kindProjectorVersion = "0.11.3"
 // backends
-lazy val lettuceVersion = "6.1.1.RELEASE"
+lazy val lettuceVersion = "6.1.2.RELEASE"
 lazy val jedisVersion = "3.6.0"
 lazy val redissonVersion = "3.15.4"
 lazy val aerospikeClientVersion = "5.1.0"
