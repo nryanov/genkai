@@ -7,7 +7,7 @@ lazy val aerospikeClientVersion = "5.1.0"
 // effects
 lazy val catsVersion = "2.5.0"
 lazy val zioVersion = "1.0.7"
-lazy val monixVersion = "3.3.0"
+lazy val monixVersion = "3.4.0"
 // logging
 lazy val slf4jApiVersion = "1.7.30"
 // test
