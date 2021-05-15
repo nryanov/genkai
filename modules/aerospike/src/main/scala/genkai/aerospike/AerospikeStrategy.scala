@@ -12,6 +12,11 @@ sealed trait AerospikeStrategy {
   def underlying: Strategy
 
   /**
+   * @return - seconds record will live before being removed by the server.
+   */
+  def expiration: Int
+
+  /**
    * Lua script which will be loaded once per RateLimiter.
    * For more details see [[genkai.aerospike.LuaScript]]
    */
@@ -89,6 +94,9 @@ object AerospikeStrategy {
       Value.get(underlying.refillDelay.toSeconds)
     )
 
+    // never expires
+    override val expiration: Int = -1
+
     override val luaScript: String = LuaScript.tokenBucket
 
     override val serverPath: String = "token_bucket.lua"
@@ -124,6 +132,8 @@ object AerospikeStrategy {
         Value.get(underlying.tokens),
         Value.get(underlying.window.size)
       )
+
+    override val expiration: Int = underlying.window.size.toInt
 
     override val luaScript: String = LuaScript.fixedWindow
 
@@ -166,6 +176,8 @@ object AerospikeStrategy {
         Value.get(underlying.window.size),
         Value.get(precision)
       )
+
+    override val expiration: Int = underlying.window.size.toInt
 
     override val luaScript: String = LuaScript.slidingWindow
 

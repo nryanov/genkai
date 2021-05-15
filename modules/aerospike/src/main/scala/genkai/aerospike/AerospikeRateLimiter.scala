@@ -6,6 +6,7 @@ import genkai.monad.syntax._
 import genkai.monad.MonadError
 import genkai.{Key, Logging, RateLimiter}
 import com.aerospike.client.AerospikeClient
+import com.aerospike.client.policy.WritePolicy
 
 abstract class AerospikeRateLimiter[F[_]](
   client: AerospikeClient,
@@ -16,6 +17,9 @@ abstract class AerospikeRateLimiter[F[_]](
 ) extends RateLimiter[F]
     with Logging[F] {
 
+  private val writePolicy = new WritePolicy(client.writePolicyDefault)
+  writePolicy.expiration = strategy.expiration
+
   override def permissions[A: Key](key: A): F[Long] = {
     val now = Instant.now()
     val keyStr = strategy.key(namespace, key, now)
@@ -23,7 +27,13 @@ abstract class AerospikeRateLimiter[F[_]](
 
     debug(s"Permissions request ($keyStr): $args") *> monad
       .eval(
-        client.execute(null, keyStr, strategy.packageName, strategy.permissionsFunction, args: _*)
+        client.execute(
+          writePolicy,
+          keyStr,
+          strategy.packageName,
+          strategy.permissionsFunction,
+          args: _*
+        )
       )
       .map(tokens => strategy.toPermissions(tokens.asInstanceOf[Long]))
   }
@@ -31,7 +41,7 @@ abstract class AerospikeRateLimiter[F[_]](
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
     val keyStr = strategy.key(namespace, key, now)
-    debug(s"Reset limits for: $keyStr") *> monad.eval(client.delete(null, keyStr)).void
+    debug(s"Reset limits for: $keyStr") *> monad.eval(client.delete(writePolicy, keyStr)).void
   }
 
   override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
@@ -40,7 +50,8 @@ abstract class AerospikeRateLimiter[F[_]](
 
     debug(s"Acquire request ($keyStr): $args") *> monad
       .eval(
-        client.execute(null, keyStr, strategy.packageName, strategy.acquireFunction, args: _*)
+        client
+          .execute(writePolicy, keyStr, strategy.packageName, strategy.acquireFunction, args: _*)
       )
       .map(tokens => strategy.isAllowed(tokens.asInstanceOf[Long]))
   }
