@@ -113,11 +113,32 @@ object LuaScript {
       |local usedTokensBin = 'ut'
       |local oldestBlockBin = 'ob' 
       |
-      |function acquire(r, currentTimestamp, cost, maxTokens, windowSize, precision)
+      |local function cleanup(r, trimBefore, oldestBlock, blocks)
+      |  local decrement = 0
+      |  local trim = math.min(trimBefore, oldestBlock + blocks)
+      |  for block = oldestBlock, trim - 1 do
+      |    local blockCount = r[block]
+      |    
+      |    if blockCount then
+      |      decrement = decrement + tonumber(blockCount)
+      |      r[block] = nil
+      |    end
+      |  end
+      |  
+      |  r[usedTokensBin] = r[usedTokensBin] - decrement
+      |  
+      |  aerospike:update(r)
+      |end
+      |
+      |local function createIfNotExists(r)
       |  if not aerospike:exists(r) then
       |    r[usedTokensBin] = 0
       |    aerospike:create(r) 
       |  end
+      |end
+      |
+      |function acquire(r, currentTimestamp, cost, maxTokens, windowSize, precision)
+      |  createIfNotExists(r)
       |
       |  local blocks = math.ceil(windowSize / precision)
       |  local currentBlock = math.floor(currentTimestamp / precision)
@@ -126,26 +147,12 @@ object LuaScript {
       |  local oldestBlock = r[oldestBlockBin]
       |  oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
       |  
+      |  -- attempt to write in the past
       |  if oldestBlock > currentBlock then
       |    return 0
       |  end
       |  
-      |  local decrement = 0
-      |  local trim = math.min(trimBefore, oldestBlock + blocks)
-      |  
-      |  for block = oldestBlock, trim - 1 do
-      |    local blockKey = usedTokensBin .. block
-      |    local blockCount = r[blockKey]
-      |    
-      |    if blockCount then
-      |      decrement = decrement + tonumber(blockCount)
-      |      r[blockKey] = nil
-      |    end
-      |  end
-      |  
-      |  r[usedTokensBin] = r[usedTokensBin] - decrement
-      |  
-      |  aerospike:update(r)
+      |  cleanup(r, trimBefore, oldestBlock, blocks)
       |  
       |  if r[usedTokensBin] + cost > maxTokens then
       |    return 0
