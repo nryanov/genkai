@@ -180,7 +180,8 @@ object AerospikeStrategy {
     override def key[A: Key](namespace: String, value: A, instant: Instant): AKey =
       new AKey(namespace, setName, Key[A].convert(value))
 
-    override def permissionsArgs(instant: Instant): List[Value] = argsPart
+    override def permissionsArgs(instant: Instant): List[Value] =
+      Value.get(instant.getEpochSecond) :: argsPart
 
     override def acquireArgs(instant: Instant, cost: Long): List[Value] =
       Value.get(instant.getEpochSecond) :: Value.get(cost) :: argsPart

@@ -126,6 +126,7 @@ object LuaScript {
       |  end
       |  
       |  r[usedTokensBin] = r[usedTokensBin] - decrement
+      |  r[oldestBlockBin] = trimBefore
       |  
       |  aerospike:update(r)
       |end
@@ -158,7 +159,6 @@ object LuaScript {
       |    return 0
       |  end
       |  
-      |  r[oldestBlockBin] = trimBefore
       |  r[usedTokensBin] = r[usedTokensBin] + cost
       |  r[currentBlock] = tonumber(r[currentBlock] or 0) + cost
       |  
@@ -167,10 +167,19 @@ object LuaScript {
       |  return 1
       |end
       |
-      |function permissions(r, maxTokens, windowSize, precision)
+      |function permissions(r, currentTimestamp, maxTokens, windowSize, precision)
       |  if not aerospike:exists(r) then
       |    return maxTokens
       |  else
+      |    local blocks = math.ceil(windowSize / precision)
+      |    local currentBlock = math.floor(currentTimestamp / precision)
+      |  
+      |    local trimBefore = currentBlock - blocks + 1  
+      |    local oldestBlock = r[oldestBlockBin]
+      |    oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
+      |    
+      |    cleanup(r, trimBefore, oldestBlock, blocks)
+      |  
       |    return math.max(0, maxTokens - r[usedTokensBin])
       |  end
       |end

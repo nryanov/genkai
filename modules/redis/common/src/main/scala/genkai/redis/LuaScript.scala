@@ -159,25 +159,24 @@ object LuaScript {
       |local ttl = tonumber(ARGV[6])
       |
       |local blocks = math.ceil(windowSize / precision)
-      |local saved = {}
       |
-      |saved.blockId = math.floor(currentTimestamp / precision)
-      |saved.trimBefore = saved.blockId - blocks + 1
-      |saved.countKey = windowSize .. ':' .. precision .. ':'
-      |saved.tsKey = saved.countKey .. 'o'
+      |local currentBlock = math.floor(currentTimestamp / precision)
+      |local trimBefore = currentBlock - blocks + 1
+      |local usedTokensKey = 'ut'
+      |local oldestBlockKey = 'ob'
       |
-      |local oldTs = redis.call('HGET', key, saved.tsKey)
-      |oldTs = oldTs and tonumber(oldTs) or saved.trimBefore
-      |if oldTs > saved.blockId then
+      |local oldestBlock = redis.call('HGET', key, oldestBlockKey)
+      |oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
+      |if oldestBlock > currentBlock then
       |  return 0
       |end
       |
       |local decrement = 0
       |local deletion = {}
-      |local trim = math.min(saved.trimBefore, oldTs + blocks)
+      |local trim = math.min(trimBefore, oldestBlock + blocks)
       |
-      |for oldBlock = oldTs, trim - 1 do
-      |  local bKey = saved.countKey .. oldBlock
+      |for oldBlock = oldestBlock, trim - 1 do
+      |  local bKey = usedTokensKey .. oldBlock
       |  local bCount = redis.call('HGET', key, bKey)
       |  if bCount then
       |    decrement = decrement + tonumber(bCount)
@@ -188,18 +187,18 @@ object LuaScript {
       |local cur
       |if #deletion > 0 then
       |  redis.call('HDEL', key, unpack(deletion))
-      |  cur = redis.call('HINCRBY', key, saved.countKey, -decrement)
+      |  cur = redis.call('HINCRBY', key, usedTokensKey, -decrement)
       |else
-      |  cur = redis.call('HGET', key, saved.countKey)
+      |  cur = redis.call('HGET', key, usedTokensKey)
       |end
       |
       |if tonumber(cur or '0') + cost > maxTokens then
       |  return 0
       |end
       |
-      |redis.call('HSET', key, saved.tsKey, saved.trimBefore)
-      |redis.call('HINCRBY', key, saved.countKey, cost)
-      |redis.call('HINCRBY', key, saved.countKey .. saved.blockId, cost)
+      |redis.call('HSET', key, oldestBlockKey, trimBefore)
+      |redis.call('HINCRBY', key, usedTokensKey, cost)
+      |redis.call('HINCRBY', key, usedTokensKey .. currentBlock, cost)
       |
       |redis.call('EXPIRE', key, ttl)
       |
@@ -220,39 +219,39 @@ object LuaScript {
       |local precision = tonumber(ARGV[4])
       |
       |local blocks = math.ceil(windowSize / precision)
-      |local saved = {}
       |
-      |saved.blockId = math.floor(currentTimestamp / precision)
-      |saved.trimBefore = saved.blockId - blocks + 1
-      |saved.countKey = windowSize .. ':' .. precision .. ':'
-      |saved.tsKey = saved.countKey .. 'o'
+      |local currentBlock = math.floor(currentTimestamp / precision)
+      |local trimBefore = currentBlock - blocks + 1
+      |local usedTokensKey = 'ut'
+      |local oldestBlockKey = 'ob'
       |
-      |local oldTs = redis.call('HGET', key, saved.tsKey)
-      |oldTs = oldTs and tonumber(oldTs) or saved.trimBefore
-      |if oldTs > saved.blockId then
+      |local oldestBlock = redis.call('HGET', key, oldestBlockKey)
+      |oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
+      |if oldestBlock > currentBlock then
       |  return 0
       |end
       |
       |local decrement = 0
       |local deletion = {}
-      |local trim = math.min(saved.trimBefore, oldTs + blocks)
+      |local trim = math.min(trimBefore, oldestBlock + blocks)
       |
-      |for oldBlock = oldTs, trim - 1 do
-      |  local bKey = saved.countKey .. oldBlock
-      |  local bCount = redis.call('HGET', key, bKey)
+      |for block = oldestBlock, trim - 1 do
+      |  local bCount = redis.call('HGET', key, block)
       |  if bCount then
       |    decrement = decrement + tonumber(bCount)
-      |    table.insert(deletion, bKey)
+      |    table.insert(deletion, block)
       |  end
       |end
       |
       |local cur
       |if #deletion > 0 then
       |  redis.call('HDEL', key, unpack(deletion))
-      |  cur = redis.call('HINCRBY', key, saved.countKey, -decrement)
+      |  cur = redis.call('HINCRBY', key, usedTokensKey, -decrement)
       |else
-      |  cur = redis.call('HGET', key, saved.countKey)
+      |  cur = redis.call('HGET', key, usedTokensKey)
       |end
+      |
+      |redis.call('HSET', key, oldestBlockKey, trimBefore)
       |
       |return math.max(0, maxTokens - tonumber(cur or '0'));
       |""".stripMargin
