@@ -1,6 +1,7 @@
 package genkai
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.funsuite.AsyncFunSuite
@@ -46,7 +47,7 @@ trait BaseSpec[F[_]]
 
     for {
       acquire <- toFuture(limiter.acquire("key"))
-      acquirePast <- toFuture(limiter.acquire("key", instant.minusSeconds(60)))
+      acquirePast <- toFuture(limiter.acquire("key", instant.minus(2, ChronoUnit.HOURS)))
       permissions <- toFuture(limiter.permissions("key"))
     } yield {
       acquire shouldBe true

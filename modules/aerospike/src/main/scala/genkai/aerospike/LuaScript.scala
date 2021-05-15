@@ -3,7 +3,6 @@ package genkai.aerospike
 // to be able to set ttl on records
 // nsup-period must be set to non-zero value in namespace config
 object LuaScript {
-  // todo: optional ttl
   val tokenBucket: String =
     """
       |local currentTokensBin = 'tokens'
@@ -36,7 +35,7 @@ object LuaScript {
       |  
       |  local hw = r[highWatermarkBin]
       |  
-      |  if currentTimestamp < hw then
+      |  if hw > currentTimestamp then
       |    aerospike:update(r)
       |    return 0
       |  end
@@ -64,7 +63,6 @@ object LuaScript {
       |end
       |""".stripMargin
 
-  // todo: optional ttl
   val fixedWindow: String =
     """
       |local usedTokensBin = 'ut'
@@ -109,63 +107,65 @@ object LuaScript {
       |end
       |""".stripMargin
 
-  // todo: optional ttl
   // ref: https://www.dr-josiah.com/2014/11/introduction-to-rate-limiting-with_26.html
   val slidingWindow: String =
     """
+      |local usedTokensBin = 'ut'
+      |local oldestBlockBin = 'ob' 
+      |
       |function acquire(r, currentTimestamp, cost, maxTokens, windowSize, precision)
+      |  if not aerospike:exists(r) then
+      |    r[usedTokensBin] = 0
+      |    aerospike:create(r) 
+      |  end
+      |
       |  local blocks = math.ceil(windowSize / precision)
-      |  local saved = {}
-      | 
-      |  saved.blockId = math.floor(currentTimestamp / precision)
-      |  saved.trimBefore = saved.blockId - blocks + 1
-      |  saved.countKey = windowSize .. ':' .. precision .. ':'
-      |  saved.tsKey = saved.countKey .. 'o'
+      |  local currentBlock = math.floor(currentTimestamp / precision)
       |  
-      |  local oldTs = r[saved.tsKey]
-      |  oldTs = oldTs and tonumber(oldTs) or saved.trimBefore
-      |  if oldTs > currentTimestamp then
+      |  local trimBefore = currentBlock - blocks + 1  
+      |  local oldestBlock = r[oldestBlockBin]
+      |  oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
+      |  
+      |  if oldestBlock > currentBlock then
       |    return 0
       |  end
       |  
       |  local decrement = 0
-      |  local deletion = {}
-      |  local trim = math.min(saved.trimBefore, oldTs + blocks)
+      |  local trim = math.min(trimBefore, oldestBlock + blocks)
       |  
-      |  for oldBlock = oldTs, trim - 1 do
-      |    local bKey = saved.countKey .. oldBlock
-      |    local bCount = r[bKey]
-      |    if bCount then
-      |      decrement = decrement + tonumber(bCount)
-      |      table.insert(deletion, bKey)
+      |  for block = oldestBlock, trim - 1 do
+      |    local blockKey = usedTokensBin .. block
+      |    local blockCount = r[blockKey]
+      |    
+      |    if blockCount then
+      |      decrement = decrement + tonumber(blockCount)
+      |      r[blockKey] = nil
       |    end
       |  end
       |  
-      |  local cur
-      |  if #deletion > 0 then
-      |    for key, _ in pairs(deletion) do
-      |      r[key] = nil
-      |    end
-      |    r[saved.countKey] = r[saved.countKey] - decrement
-      |    cur = r[saved.countKey]
-      |  else
-      |    cur = r[saved.countKey]
-      |  end
+      |  r[usedTokensBin] = r[usedTokensBin] - decrement
       |  
-      |  if tonumber(cur or 0) + cost > maxTokens then
+      |  aerospike:update(r)
+      |  
+      |  if r[usedTokensBin] + cost > maxTokens then
       |    return 0
       |  end
       |  
-      |  r[saved.tsKey] = saved.trimBefore
-      |  r[saved.countKey] = r[saved.countKey] + cost
-      |  r[saved.countKey .. saved.blockId] = r[saved.countKey .. saved.blockId] + cost
+      |  r[oldestBlockBin] = trimBefore
+      |  r[usedTokensBin] = r[usedTokensBin] + cost
+      |  r[currentBlock] = tonumber(r[currentBlock] or 0) + cost
+      |  
+      |  aerospike:update(r)
       |
       |  return 1
       |end
       |
       |function permissions(r, maxTokens, windowSize, precision)
-      |  local countKey = windowSize .. ':' .. precision .. ':'
-      |  return math.max(0, maxTokens - r[countKey])
+      |  if not aerospike:exists(r) then
+      |    return maxTokens
+      |  else
+      |    return math.max(0, maxTokens - r[usedTokensBin])
+      |  end
       |end
       |""".stripMargin
 }

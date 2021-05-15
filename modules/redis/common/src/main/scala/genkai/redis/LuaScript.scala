@@ -25,11 +25,12 @@ object LuaScript {
       |local isExists = redis.call('EXISTS', KEYS[1])
       |
       |if isExists == 0 then 
-      |  redis.call('HMSET', KEYS[1], 'tokens', maxAmount, 'lastRefillTime', currentTimestamp)
+      |  redis.call('HMSET', KEYS[1], 'tokens', maxAmount, 'lastRefillTime', currentTimestamp, 'hw', currentTimestamp)
       |end
       |
-      |local hw = tonumber(redis.call('HGET', KEYS[1], 'hw') or currentTimestamp)
-      |if currentTimestamp < hw then
+      |local hw = redis.call('HGET', KEYS[1], 'hw')
+      |hw = hw and tonumber(hw) or currentTimestamp
+      |if hw > currentTimestamp then
       |  return 0
       |end
       |
@@ -102,12 +103,14 @@ object LuaScript {
       |  redis.call('HMSET', KEYS[1], 'usedTokens', 0, 'hw', windowStartTs)
       |end
       |
-      |local hw = tonumber(redis.call('HGET', KEYS[1], 'hw'))
+      |local hw = redis.call('HGET', KEYS[1], 'hw')
+      |hw = hw and tonumber(hw) or windowStartTs 
       |
-      |if windowStartTs < hw then
+      |if hw > windowStartTs then
       |  return 0
       |end
       |
+      |redis.call('HSET', KEYS[1], 'hw', windowStartTs)
       |local current = redis.call('HGET', KEYS[1], 'usedTokens')
       |
       |if maxTokens - current - cost >= 0 then
@@ -165,7 +168,7 @@ object LuaScript {
       |
       |local oldTs = redis.call('HGET', key, saved.tsKey)
       |oldTs = oldTs and tonumber(oldTs) or saved.trimBefore
-      |if oldTs > currentTimestamp then
+      |if oldTs > saved.blockId then
       |  return 0
       |end
       |
@@ -226,7 +229,7 @@ object LuaScript {
       |
       |local oldTs = redis.call('HGET', key, saved.tsKey)
       |oldTs = oldTs and tonumber(oldTs) or saved.trimBefore
-      |if oldTs > currentTimestamp then
+      |if oldTs > saved.blockId then
       |  return 0
       |end
       |
