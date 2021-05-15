@@ -121,9 +121,9 @@ object RedisStrategy {
   final case class RedisSlidingWindow(underlying: Strategy.SlidingWindow) extends RedisStrategy {
     private val precision = underlying.window match {
       case Window.Second => 1
-      case Window.Minute => 60 // 1 minute -> 60 buckets (~ seconds)
+      case Window.Minute => 1 // 1 minute -> 60 buckets (~ seconds)
       case Window.Hour   => 60 // 1 hour -> 60 buckets (~ minutes)
-      case Window.Day    => 24 // 1 day -> 24 buckets (~ hours)
+      case Window.Day    => 3600 // 1 day -> 24 buckets (~ hours)
     }
 
     private val permissionArgsPart =
