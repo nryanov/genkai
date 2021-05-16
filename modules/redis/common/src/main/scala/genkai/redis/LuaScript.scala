@@ -19,29 +19,21 @@ object LuaScript {
     """
       |local currentTimestamp = tonumber(ARGV[1])
       |local cost = tonumber(ARGV[2])
-      |local maxAmount = tonumber(ARGV[3])
+      |local maxTokens = tonumber(ARGV[3])
       |local refillAmount = tonumber(ARGV[4])
       |local refillTime = tonumber(ARGV[5])
       |local isExists = redis.call('EXISTS', KEYS[1])
       |
       |if isExists == 0 then 
-      |  redis.call('HMSET', KEYS[1], 'tokens', maxAmount, 'lastRefillTime', currentTimestamp, 'hw', currentTimestamp)
+      |  redis.call('HMSET', KEYS[1], 'tokens', maxTokens, 'lastRefillTime', currentTimestamp, 'hw', currentTimestamp)
       |end
-      |
-      |local hw = redis.call('HGET', KEYS[1], 'hw')
-      |hw = hw and tonumber(hw) or currentTimestamp
-      |if hw > currentTimestamp then
-      |  return 0
-      |end
-      |
-      |redis.call('HSET', KEYS[1], 'hw', currentTimestamp)
       |
       |local current = redis.call('HMGET', KEYS[1], 'tokens', 'lastRefillTime')
       |local lastRefillTime = tonumber(current[2])
       |
       |if currentTimestamp - lastRefillTime >= refillTime then 
       |    local refillTimes = math.floor((currentTimestamp - lastRefillTime) / refillTime)
-      |    local refill = math.min(maxAmount, current[1] + refillAmount * refillTimes)
+      |    local refill = math.min(maxTokens, current[1] + refillAmount * refillTimes)
       |    redis.call('HSET', KEYS[1], 'tokens', refill, 'lastRefillTime', currentTimestamp)
       |end
       |
@@ -64,29 +56,31 @@ object LuaScript {
   val tokenBucketPermissions: String =
     """
       |local currentTimestamp = tonumber(ARGV[1])
-      |local maxAmount = tonumber(ARGV[2])
+      |local maxTokens = tonumber(ARGV[2])
       |local refillAmount = tonumber(ARGV[3])
       |local refillTime = tonumber(ARGV[4])
       |local isExists = redis.call('EXISTS', KEYS[1])
       |
-      |if isExists == 0 then 
-      |  redis.call('HMSET', KEYS[1], 'tokens', maxAmount, 'lastRefillTime', currentTimestamp) 
-      |end
-      |
-      |local current = redis.call('HMGET', KEYS[1], 'tokens', 'lastRefillTime')
-      |local lastRefillTime = tonumber(current[2])
-      |
-      |if currentTimestamp - lastRefillTime >= refillTime then 
+      |if isExists == 0 then
+      |  -- record does not exists yet, so permissions are not used
+      |  return maxTokens
+      |else
+      |  local current = redis.call('HMGET', KEYS[1], 'tokens', 'lastRefillTime')
+      |  local lastRefillTime = tonumber(current[2])
+      |  
+      |  -- refill
+      |  if currentTimestamp - lastRefillTime >= refillTime then 
       |    local refillTimes = math.floor((currentTimestamp - lastRefillTime) / refillTime)
-      |    local refill = math.min(maxAmount, current[1] + refillAmount * refillTimes)
+      |    local refill = math.min(maxTokens, current[1] + refillAmount * refillTimes)
       |    redis.call('HMSET', KEYS[1], 'tokens', refill, 'lastRefillTime', currentTimestamp)
-      |end
+      |  end
       |
-      |return tonumber(redis.call('HGET', KEYS[1], 'tokens'))
+      |  return tonumber(redis.call('HGET', KEYS[1], 'tokens'))
+      |end
       |""".stripMargin
 
   /**
-   * args: key, windowTs, cost, maxTokens, ttl
+   * args: key, windowStartTs, cost, maxTokens, ttl (windowSize)
    * key format: fixed_window:<key>:<timestamp> where <timestamp> is truncated to the beginning of the window
    * @return - 1 if token acquired, 0 - otherwise
    */
@@ -110,6 +104,10 @@ object LuaScript {
       |  return 0
       |end
       |
+      |if windowStartTs - hw >= ttl then
+      |  redis.call('HSET', KEYS[1], 'usedTokens', 0)
+      |end
+      |
       |redis.call('HSET', KEYS[1], 'hw', windowStartTs)
       |local current = redis.call('HGET', KEYS[1], 'usedTokens')
       |
@@ -124,18 +122,33 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * args: key, maxTokens
+   * args: key, windowStartTs, maxTokens, ttl
    * key format: fixed_window:<key>:<timestamp> where <timestamp> is truncated to the beginning of the window
    * @return - permissions
    */
   val fixedWindowPermissions: String =
     """
-      |local maxTokens = tonumber(ARGV[1])
+      |local windowStartTs = tonumber(ARGV[1])
+      |local maxTokens = tonumber(ARGV[2])
+      |local ttl = tonumber(ARGV[3])
       |local isExists = redis.call('EXISTS', KEYS[1])
       |
       |if isExists == 0 then 
       |  return maxTokens
       |else
+      |  local hw = redis.call('HGET', KEYS[1], 'hw')
+      |  hw = hw and tonumber(hw) or windowStartTs 
+      |
+      |  -- request in the past has no permissions
+      |  if hw > windowStartTs then
+      |    return 0
+      |  end
+      |  
+      |  -- if request in the next window => return maxTokens
+      |  if windowStartTs - hw >= ttl then
+      |    return maxTokens
+      |  end
+      |
       |  local used = redis.call('HGET', KEYS[1], 'usedTokens')
       |  used = used and tonumber(used) or 0
       |  return math.max(0, maxTokens - used)
@@ -143,7 +156,7 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * input: key, currentTimestamp, cost, maxTokens, windowSize, precision, ttl
+   * input: key, instant, cost, maxTokens, windowSize, precision, ttl
    * key format: sliding_window:<key>
    * @return - 1 if token acquired, 0 - otherwise
    */
@@ -151,7 +164,7 @@ object LuaScript {
   val slidingWindowAcquire: String =
     """
       |local key = KEYS[1]
-      |local currentTimestamp = tonumber(ARGV[1])
+      |local instant = tonumber(ARGV[1])
       |local cost = tonumber(ARGV[2])
       |local maxTokens = tonumber(ARGV[3])
       |local windowSize = tonumber(ARGV[4])
@@ -160,7 +173,7 @@ object LuaScript {
       |
       |local blocks = math.ceil(windowSize / precision)
       |
-      |local currentBlock = math.floor(currentTimestamp / precision)
+      |local currentBlock = math.floor(instant / precision)
       |local trimBefore = currentBlock - blocks + 1
       |local usedTokensKey = 'ut'
       |local oldestBlockKey = 'ob'
@@ -206,53 +219,47 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * input: key, currentTimestamp, maxTokens, windowSize, precision
+   * input: key, instant, maxTokens, windowSize, precision
    * key format: sliding_window:<key>
    * @return - permissions
    */
   val slidingWindowPermissions: String =
     """
       |local key = KEYS[1]
-      |local currentTimestamp = tonumber(ARGV[1])
+      |local instant = tonumber(ARGV[1])
       |local maxTokens = tonumber(ARGV[2])
       |local windowSize = tonumber(ARGV[3])
       |local precision = tonumber(ARGV[4])
       |
+      |local isExists = redis.call('EXISTS', KEYS[1])
+      |if isExists == 0 then
+      |  return maxTokens
+      |end
+      |
       |local blocks = math.ceil(windowSize / precision)
       |
-      |local currentBlock = math.floor(currentTimestamp / precision)
-      |local trimBefore = currentBlock - blocks + 1
+      |local currentBlock = math.floor(instant / precision)
+      |local lastBlock = currentBlock - blocks + 1
       |local usedTokensKey = 'ut'
       |local oldestBlockKey = 'ob'
       |
       |local oldestBlock = redis.call('HGET', key, oldestBlockKey)
-      |oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
+      |oldestBlock = oldestBlock and tonumber(oldestBlock) or lastBlock
       |if oldestBlock > currentBlock then
+      |  -- request in the past has no permissions
       |  return 0
       |end
       |
-      |local decrement = 0
-      |local deletion = {}
-      |local trim = math.min(trimBefore, oldestBlock + blocks)
-      |
-      |for block = oldestBlock, trim - 1 do
-      |  local bCount = redis.call('HGET', key, block)
+      |-- count actual used tokens in previous reachable blocks
+      |local current = 0 
+      |for block = lastBlock, currentBlock do
+      |  local bKey = usedTokensKey .. block
+      |  local bCount = redis.call('HGET', key, bKey)
       |  if bCount then
-      |    decrement = decrement + tonumber(bCount)
-      |    table.insert(deletion, block)
+      |    current = current + tonumber(bCount)
       |  end
       |end
       |
-      |local cur
-      |if #deletion > 0 then
-      |  redis.call('HDEL', key, unpack(deletion))
-      |  cur = redis.call('HINCRBY', key, usedTokensKey, -decrement)
-      |else
-      |  cur = redis.call('HGET', key, usedTokensKey)
-      |end
-      |
-      |redis.call('HSET', key, oldestBlockKey, trimBefore)
-      |
-      |return math.max(0, maxTokens - tonumber(cur or '0'));
+      |return math.max(0, maxTokens - current);
       |""".stripMargin
 }

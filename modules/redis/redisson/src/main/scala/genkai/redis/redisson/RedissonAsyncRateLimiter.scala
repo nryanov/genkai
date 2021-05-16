@@ -24,11 +24,9 @@ abstract class RedissonAsyncRateLimiter[F[_]](
   /* to avoid unnecessary memory allocations */
   private val scriptCommand: RScript = client.getScript(new StringCodec)
 
-  override def permissions[A: Key](key: A): F[Long] = {
-    val now = Instant.now()
-
-    val keyStr = strategy.keys(key, now)
-    val args = strategy.permissionsArgs(now)
+  override private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long] = {
+    val keyStr = strategy.keys(key, instant)
+    val args = strategy.permissionsArgs(instant)
 
     debug(s"Permissions request ($keyStr): $args") *>
       monad
@@ -68,7 +66,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
         .void
   }
 
-  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
+  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant, cost)
 

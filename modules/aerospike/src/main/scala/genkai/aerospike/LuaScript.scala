@@ -7,14 +7,12 @@ object LuaScript {
     """
       |local currentTokensBin = 'tokens'
       |local lastRefillTimeBin = 'refillTime'
-      |local highWatermarkBin = 'hw'
       |
       |local function createIfNotExists(r, currentTimestamp, maxTokens)
       |  if not aerospike:exists(r) then 
       |    aerospike:create(r)
       |    r[currentTokensBin] = maxTokens
       |    r[lastRefillTimeBin] = currentTimestamp    
-      |    r[highWatermarkBin] = currentTimestamp
       |  end
       |end
       |
@@ -32,14 +30,6 @@ object LuaScript {
       |
       |function acquire(r, currentTimestamp, cost, maxTokens, refillAmount, refillTime)
       |  createIfNotExists(r, currentTimestamp, maxTokens)
-      |  
-      |  local hw = r[highWatermarkBin]
-      |  
-      |  if hw > currentTimestamp then
-      |    aerospike:update(r)
-      |    return 0
-      |  end
-      |  
       |  refill(r, currentTimestamp, maxTokens, refillAmount, refillTime)
       |  
       |  local current = r[currentTokensBin]
@@ -55,11 +45,14 @@ object LuaScript {
       |end
       |
       |function permissions(r, currentTimestamp, maxTokens, refillAmount, refillTime)
-      |  createIfNotExists(r, currentTimestamp, maxTokens)
-      |  refill(r, currentTimestamp, maxTokens, refillAmount, refillTime)
-      |  
-      |  aerospike:update(r)
-      |  return r[currentTokensBin]
+      |  if not aerospike:exists(r) then
+      |    -- record does not exists yet, so permissions are not used
+      |    return maxTokens
+      |  else
+      |    refill(r, currentTimestamp, maxTokens, refillAmount, refillTime)  
+      |    aerospike:update(r)
+      |    return r[currentTokensBin]
+      |  end
       |end
       |""".stripMargin
 
@@ -82,10 +75,11 @@ object LuaScript {
       |   return 0
       |  end
       |   
-      |   if windowStartTs - hw >= windowSize then
-      |     r[usedTokensBin] = 0
-      |     r[highWatermarkBin] = windowStartTs
-      |   end
+      |  if windowStartTs - hw >= windowSize then
+      |    r[usedTokensBin] = 0
+      |  end
+      |  
+      |  r[highWatermarkBin] = windowStartTs
       |  
       |  local usedTokens = r[usedTokensBin] or 0
       |  if maxTokens - usedTokens - cost >= 0 then
@@ -98,10 +92,22 @@ object LuaScript {
       |  end
       |end
       |
-      |function permissions(r, maxTokens)
+      |function permissions(r, windowStartTs, maxTokens, windowSize)
       |  if not aerospike:exists(r) then 
       |    return maxTokens
       |  else
+      |    local hw = r[highWatermarkBin]
+      |  
+      |    -- request in the past has no permissions
+      |    if hw > windowStartTs then
+      |     return 0
+      |    end
+      |    
+      |    if windowStartTs - hw >= windowSize then
+      |      r[usedTokensBin] = 0
+      |    end
+      |  
+      |    
       |    return math.max(0, maxTokens - r[usedTokensBin])
       |  end
       |end
@@ -138,11 +144,11 @@ object LuaScript {
       |  end
       |end
       |
-      |function acquire(r, currentTimestamp, cost, maxTokens, windowSize, precision)
+      |function acquire(r, instant, cost, maxTokens, windowSize, precision)
       |  createIfNotExists(r)
       |
       |  local blocks = math.ceil(windowSize / precision)
-      |  local currentBlock = math.floor(currentTimestamp / precision)
+      |  local currentBlock = math.floor(instant / precision)
       |  
       |  local trimBefore = currentBlock - blocks + 1  
       |  local oldestBlock = r[oldestBlockBin]
@@ -167,20 +173,33 @@ object LuaScript {
       |  return 1
       |end
       |
-      |function permissions(r, currentTimestamp, maxTokens, windowSize, precision)
+      |function permissions(r, instant, maxTokens, windowSize, precision)
       |  if not aerospike:exists(r) then
       |    return maxTokens
       |  else
       |    local blocks = math.ceil(windowSize / precision)
-      |    local currentBlock = math.floor(currentTimestamp / precision)
+      |    local currentBlock = math.floor(instant / precision)
       |  
-      |    local trimBefore = currentBlock - blocks + 1  
+      |    local lastBlock = currentBlock - blocks + 1  
       |    local oldestBlock = r[oldestBlockBin]
-      |    oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
+      |    oldestBlock = oldestBlock and tonumber(oldestBlock) or lastBlock
       |    
-      |    cleanup(r, trimBefore, oldestBlock, blocks)
-      |  
-      |    return math.max(0, maxTokens - r[usedTokensBin])
+      |    if oldestBlock > currentBlock then
+      |      -- request in the past has no permissions
+      |      return 0
+      |    end
+      |    
+      |    -- count actual used tokens in previous reachable blocks
+      |    local current = 0 
+      |    for block = lastBlock, currentBlock do
+      |      local blockCount = r[block]
+      |    
+      |      if blockCount then
+      |        current = current + tonumber(blockCount)
+      |      end
+      |    end
+      |      
+      |    return math.max(0, maxTokens - current)
       |  end
       |end
       |""".stripMargin

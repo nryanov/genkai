@@ -126,7 +126,10 @@ object AerospikeStrategy {
     private val setName: String = "fixed_window_set"
 
     private val permissionArgsPart =
-      List(Value.get(underlying.tokens))
+      List(
+        Value.get(underlying.tokens),
+        Value.get(underlying.window.size)
+      )
     private val acquireArgsPart =
       List(
         Value.get(underlying.tokens),
@@ -148,7 +151,10 @@ object AerospikeStrategy {
     override def key[A: Key](namespace: String, value: A, instant: Instant): AKey =
       new AKey(namespace, setName, Key[A].convert(value))
 
-    override def permissionsArgs(instant: Instant): List[Value] = permissionArgsPart
+    override def permissionsArgs(instant: Instant): List[Value] = {
+      val windowStartTs = instant.truncatedTo(underlying.window.unit).getEpochSecond
+      Value.get(windowStartTs) :: permissionArgsPart
+    }
 
     override def acquireArgs(instant: Instant, cost: Long): List[Value] = {
       val windowStartTs = instant.truncatedTo(underlying.window.unit).getEpochSecond
