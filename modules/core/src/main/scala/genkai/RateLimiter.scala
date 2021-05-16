@@ -18,7 +18,7 @@ trait RateLimiter[F[_]] {
 
   /**
    * @param key - ~ object id
-   * @param instant - request time
+   * @param instant - request time. [[genkai.Strategy.TokenBucket]] strategy will not use the passed instant
    * @tparam A - key type with implicit [[genkai.Key]] type class instance
    * @return - unused permissions
    */
@@ -34,7 +34,7 @@ trait RateLimiter[F[_]] {
   /**
    * Try to acquire token. Returns immediately.
    * @param key - ~ object id
-   * @param instant - request time
+   * @param instant - request time. [[genkai.Strategy.TokenBucket]] strategy will not use the passed instant
    * @param cost - request cost
    * @tparam A - key type with implicit [[genkai.Key]] type class instance
    * @return - true if token was acquired, false - otherwise
@@ -52,7 +52,7 @@ trait RateLimiter[F[_]] {
   /**
    * Try to acquire token. Returns immediately.
    * @param key - ~ object id
-   * @param instant - request time
+   * @param instant - request time. [[genkai.Strategy.TokenBucket]] strategy will not use the passed instant
    * @tparam A - key type with implicit [[genkai.Key]] type class instance
    * @return
    */
