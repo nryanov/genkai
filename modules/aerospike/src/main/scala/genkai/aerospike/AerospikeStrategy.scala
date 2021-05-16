@@ -128,7 +128,10 @@ object AerospikeStrategy {
     private val setName: String = "fixed_window_set"
 
     private val permissionArgsPart =
-      List(Value.get(underlying.tokens))
+      List(
+        Value.get(underlying.tokens),
+        Value.get(underlying.window.size)
+      )
     private val acquireArgsPart =
       List(
         Value.get(underlying.tokens),

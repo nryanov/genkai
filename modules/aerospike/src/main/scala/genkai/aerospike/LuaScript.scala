@@ -75,10 +75,11 @@ object LuaScript {
       |   return 0
       |  end
       |   
-      |   if windowStartTs - hw >= windowSize then
-      |     r[usedTokensBin] = 0
-      |     r[highWatermarkBin] = windowStartTs
-      |   end
+      |  if windowStartTs - hw >= windowSize then
+      |    r[usedTokensBin] = 0
+      |  end
+      |  
+      |  r[highWatermarkBin] = windowStartTs
       |  
       |  local usedTokens = r[usedTokensBin] or 0
       |  if maxTokens - usedTokens - cost >= 0 then
@@ -91,7 +92,7 @@ object LuaScript {
       |  end
       |end
       |
-      |function permissions(r, windowStartTs, maxTokens)
+      |function permissions(r, windowStartTs, maxTokens, windowSize)
       |  if not aerospike:exists(r) then 
       |    return maxTokens
       |  else
@@ -101,6 +102,11 @@ object LuaScript {
       |    if hw > windowStartTs then
       |     return 0
       |    end
+      |    
+      |    if windowStartTs - hw >= windowSize then
+      |      r[usedTokensBin] = 0
+      |    end
+      |  
       |    
       |    return math.max(0, maxTokens - r[usedTokensBin])
       |  end
@@ -182,9 +188,7 @@ object LuaScript {
       |      -- request in the past has no permissions
       |      return 0
       |    end
-      |    
-      |    cleanup(r, trimBefore, oldestBlock, blocks)
-      |  
+      |      
       |    return math.max(0, maxTokens - r[usedTokensBin])
       |  end
       |end

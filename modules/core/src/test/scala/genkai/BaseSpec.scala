@@ -27,7 +27,7 @@ trait BaseSpec[F[_]]
       Strategy.FixedWindow(10, Window.Hour),
       Strategy.SlidingWindow(10, Window.Hour)
     )
-  ) yield test(s"should return not used permissions: $strategy") {
+  ) yield test(s"should return not used permissions for not existing records: $strategy") {
     val limiter = rateLimiter(strategy)
 
     for {
@@ -37,7 +37,36 @@ trait BaseSpec[F[_]]
 
   for (
     strategy <- Seq(
-//      Strategy.TokenBucket(10, 1, 10 minutes), // todo: make another test for it
+      Strategy.FixedWindow(10, Window.Hour),
+      Strategy.SlidingWindow(10, Window.Hour)
+    )
+  ) yield test(s"should return 0 permissions for request in the past: $strategy") {
+    val limiter = rateLimiter(strategy)
+    val instant = Instant.now()
+
+    for {
+      _ <- toFuture(limiter.acquire("key", instant))
+      permissions <- toFuture(limiter.permissions("key", instant.minus(2, ChronoUnit.HOURS)))
+    } yield permissions shouldBe 0L
+  }
+
+  for (
+    strategy <- Seq(
+      Strategy.FixedWindow(10, Window.Hour),
+      Strategy.SlidingWindow(10, Window.Hour)
+    )
+  ) yield test(s"should return max permissions for request in the next window: $strategy") {
+    val limiter = rateLimiter(strategy)
+    val instant = Instant.now()
+
+    for {
+      _ <- toFuture(limiter.acquire("key", instant))
+      permissions <- toFuture(limiter.permissions("key", instant.plus(2, ChronoUnit.HOURS)))
+    } yield permissions shouldBe 10L
+  }
+
+  for (
+    strategy <- Seq(
       Strategy.FixedWindow(10, Window.Hour),
       Strategy.SlidingWindow(10, Window.Hour)
     )
@@ -112,26 +141,6 @@ trait BaseSpec[F[_]]
       r1 shouldBe true
       r2 shouldBe 9L
       r3 shouldBe 10L
-    }
-  }
-
-  for (
-    strategy <- Seq(
-      Strategy.TokenBucket(1, 1, 10 minutes),
-      Strategy.FixedWindow(1, Window.Hour),
-      Strategy.SlidingWindow(1, Window.Hour)
-    )
-  ) yield test(s"should acquire last token: $strategy") {
-    val limiter = rateLimiter(strategy)
-
-    for {
-      r1 <- toFuture(limiter.acquire("key"))
-      r2 <- toFuture(limiter.permissions("key"))
-      r3 <- toFuture(limiter.acquire("key"))
-    } yield {
-      r1 shouldBe true
-      r2 shouldBe 0L
-      r3 shouldBe false
     }
   }
 

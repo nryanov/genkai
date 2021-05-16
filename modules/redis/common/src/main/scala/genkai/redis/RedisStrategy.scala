@@ -94,7 +94,7 @@ object RedisStrategy {
 
   final case class RedisFixedWindow(underlying: Strategy.FixedWindow) extends RedisStrategy {
     private val permissionArgsPart =
-      List(underlying.tokens.toString)
+      List(underlying.tokens.toString, underlying.window.size.toString)
     private val acquireArgsPart =
       List(
         underlying.tokens.toString,
