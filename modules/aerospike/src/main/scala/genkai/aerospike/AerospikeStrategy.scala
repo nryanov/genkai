@@ -110,13 +110,11 @@ object AerospikeStrategy {
     override def key[A: Key](namespace: String, value: A, instant: Instant): AKey =
       new AKey(namespace, setName, Key[A].convert(value))
 
-    // for token bucket strategy we always need a current timestamp
     override def permissionsArgs(instant: Instant): List[Value] =
-      Value.get(Instant.now().getEpochSecond) :: argsPart
+      Value.get(instant.getEpochSecond) :: argsPart
 
-    // for token bucket strategy we always need a current timestamp
     override def acquireArgs(instant: Instant, cost: Long): List[Value] =
-      Value.get(Instant.now().getEpochSecond) :: Value.get(cost) :: argsPart
+      Value.get(instant.getEpochSecond) :: Value.get(cost) :: argsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 

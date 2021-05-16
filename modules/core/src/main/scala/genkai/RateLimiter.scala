@@ -17,12 +17,13 @@ trait RateLimiter[F[_]] {
   final def permissions[A: Key](key: A): F[Long] = permissions(key, Instant.now())
 
   /**
+   * For internal usage only (ex. tests)
    * @param key - ~ object id
-   * @param instant - request time. [[genkai.Strategy.TokenBucket]] strategy will not use the passed instant
+   * @param instant - request time
    * @tparam A - key type with implicit [[genkai.Key]] type class instance
    * @return - unused permissions
    */
-  def permissions[A: Key](key: A, instant: Instant): F[Long]
+  private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long]
 
   /**
    * @param key - ~ object id
@@ -33,13 +34,14 @@ trait RateLimiter[F[_]] {
 
   /**
    * Try to acquire token. Returns immediately.
+   * For internal usage only (ex. tests)
    * @param key - ~ object id
-   * @param instant - request time. [[genkai.Strategy.TokenBucket]] strategy will not use the passed instant
+   * @param instant - request time
    * @param cost - request cost
    * @tparam A - key type with implicit [[genkai.Key]] type class instance
    * @return - true if token was acquired, false - otherwise
    */
-  def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean]
+  private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean]
 
   /**
    * Try to acquire token. Returns immediately.
@@ -51,12 +53,13 @@ trait RateLimiter[F[_]] {
 
   /**
    * Try to acquire token. Returns immediately.
+   * For internal usage only (ex. tests)
    * @param key - ~ object id
-   * @param instant - request time. [[genkai.Strategy.TokenBucket]] strategy will not use the passed instant
+   * @param instant - request time
    * @tparam A - key type with implicit [[genkai.Key]] type class instance
    * @return
    */
-  final def acquire[A: Key](key: A, instant: Instant): F[Boolean] =
+  private[genkai] def acquire[A: Key](key: A, instant: Instant): F[Boolean] =
     acquire(key, instant, cost = 1)
 
   /**

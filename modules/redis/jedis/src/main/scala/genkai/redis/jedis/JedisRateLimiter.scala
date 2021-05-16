@@ -17,7 +17,7 @@ abstract class JedisRateLimiter[F[_]](
   permissionsSha: String
 ) extends RateLimiter[F]
     with Logging[F] {
-  override def permissions[A: Key](key: A, instant: Instant): F[Long] =
+  override private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long] =
     useClient { client =>
       val keys = strategy.keys(key, instant)
       val args = keys ::: strategy.permissionsArgs(instant)
@@ -36,7 +36,7 @@ abstract class JedisRateLimiter[F[_]](
     )
   }
 
-  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
+  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
     useClient { client =>
       val keys = strategy.keys(key, instant)
       val args = keys ::: strategy.acquireArgs(instant, cost)

@@ -21,7 +21,7 @@ abstract class LettuceAsyncRateLimiter[F[_]](
     with Logging[F] {
   private val asyncCommands = connection.async()
 
-  override def permissions[A: Key](key: A, instant: Instant): F[Long] = {
+  override private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.permissionsArgs(instant)
 
@@ -59,7 +59,7 @@ abstract class LettuceAsyncRateLimiter[F[_]](
       }
   }
 
-  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
+  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant, cost)
 

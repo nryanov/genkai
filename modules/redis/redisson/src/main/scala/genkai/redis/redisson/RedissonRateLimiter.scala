@@ -24,7 +24,7 @@ abstract class RedissonRateLimiter[F[_]](
   /* to avoid unnecessary memory allocations */
   private val scriptCommand: RScript = client.getScript(new StringCodec)
 
-  override def permissions[A: Key](key: A, instant: Instant): F[Long] = {
+  override private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.permissionsArgs(instant)
 

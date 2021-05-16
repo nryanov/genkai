@@ -249,8 +249,7 @@ trait BaseSpec[F[_]]
     }
   }
 
-  // fixme
-  ignore("[TokenBucket] should refresh tokens after delay") {
+  test("[TokenBucket] should refresh tokens after delay") {
     val limiter = rateLimiter(Strategy.TokenBucket(3, 1, 10 seconds))
 
     val instant = Instant.now()

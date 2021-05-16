@@ -22,7 +22,7 @@ abstract class LettuceRateLimiter[F[_]](
 
   private val syncCommands = connection.sync()
 
-  override def permissions[A: Key](key: A, instant: Instant): F[Long] = {
+  override private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.permissionsArgs(instant)
 

@@ -24,7 +24,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
   /* to avoid unnecessary memory allocations */
   private val scriptCommand: RScript = client.getScript(new StringCodec)
 
-  override def permissions[A: Key](key: A, instant: Instant): F[Long] = {
+  override private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.permissionsArgs(instant)
 
@@ -66,7 +66,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
         .void
   }
 
-  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
+  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant, cost)
 

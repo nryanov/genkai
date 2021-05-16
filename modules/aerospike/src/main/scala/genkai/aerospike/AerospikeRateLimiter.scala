@@ -20,7 +20,7 @@ abstract class AerospikeRateLimiter[F[_]](
   private val writePolicy = new WritePolicy(client.writePolicyDefault)
   writePolicy.expiration = strategy.expiration
 
-  override def permissions[A: Key](key: A, instant: Instant): F[Long] = {
+  override private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long] = {
     val keyStr = strategy.key(namespace, key, instant)
     val args = strategy.permissionsArgs(instant)
 
@@ -43,7 +43,7 @@ abstract class AerospikeRateLimiter[F[_]](
     debug(s"Reset limits for: $keyStr") *> monad.eval(client.delete(writePolicy, keyStr)).void
   }
 
-  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
+  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
     val keyStr = strategy.key(namespace, key, instant)
     val args = strategy.acquireArgs(instant, cost)
 
