@@ -1,6 +1,7 @@
 package genkai
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.funsuite.AsyncFunSuite
@@ -32,6 +33,27 @@ trait BaseSpec[F[_]]
     for {
       permissions <- toFuture(limiter.permissions("key"))
     } yield permissions shouldBe 10L
+  }
+
+  for (
+    strategy <- Seq(
+      Strategy.TokenBucket(10, 1, 10 minutes),
+      Strategy.FixedWindow(10, Window.Hour),
+      Strategy.SlidingWindow(10, Window.Hour)
+    )
+  ) yield test(s"should not acquire token if current timestamp is in the past: $strategy") {
+    val limiter = rateLimiter(strategy)
+    val instant = Instant.now()
+
+    for {
+      acquire <- toFuture(limiter.acquire("key"))
+      acquirePast <- toFuture(limiter.acquire("key", instant.minus(2, ChronoUnit.HOURS)))
+      permissions <- toFuture(limiter.permissions("key"))
+    } yield {
+      acquire shouldBe true
+      acquirePast shouldBe false
+      permissions shouldBe 9L
+    }
   }
 
   for (

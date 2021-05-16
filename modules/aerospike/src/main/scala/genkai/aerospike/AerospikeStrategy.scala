@@ -12,6 +12,11 @@ sealed trait AerospikeStrategy {
   def underlying: Strategy
 
   /**
+   * @return - seconds record will live before being removed by the server.
+   */
+  def expiration: Int
+
+  /**
    * Lua script which will be loaded once per RateLimiter.
    * For more details see [[genkai.aerospike.LuaScript]]
    */
@@ -86,8 +91,11 @@ object AerospikeStrategy {
     private val argsPart = List(
       Value.get(underlying.tokens),
       Value.get(underlying.refillAmount),
-      Value.get(underlying.refillDelay.toMillis)
+      Value.get(underlying.refillDelay.toSeconds)
     )
+
+    // never expires
+    override val expiration: Int = -1
 
     override val luaScript: String = LuaScript.tokenBucket
 
@@ -103,10 +111,10 @@ object AerospikeStrategy {
       new AKey(namespace, setName, Key[A].convert(value))
 
     override def permissionsArgs(instant: Instant): List[Value] =
-      Value.get(instant.toEpochMilli) :: argsPart
+      Value.get(instant.getEpochSecond) :: argsPart
 
     override def acquireArgs(instant: Instant, cost: Long): List[Value] =
-      Value.get(instant.toEpochMilli) :: Value.get(cost) :: argsPart
+      Value.get(instant.getEpochSecond) :: Value.get(cost) :: argsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 
@@ -125,6 +133,8 @@ object AerospikeStrategy {
         Value.get(underlying.window.size)
       )
 
+    override val expiration: Int = underlying.window.size.toInt
+
     override val luaScript: String = LuaScript.fixedWindow
 
     override val serverPath: String = "fixed_window.lua"
@@ -140,8 +150,10 @@ object AerospikeStrategy {
 
     override def permissionsArgs(instant: Instant): List[Value] = permissionArgsPart
 
-    override def acquireArgs(instant: Instant, cost: Long): List[Value] =
-      Value.get(instant.toEpochMilli) :: Value.get(cost) :: acquireArgsPart
+    override def acquireArgs(instant: Instant, cost: Long): List[Value] = {
+      val windowStartTs = instant.truncatedTo(underlying.window.unit).getEpochSecond
+      Value.get(windowStartTs) :: Value.get(cost) :: acquireArgsPart
+    }
 
     override def isAllowed(value: Long): Boolean = value != 0
 
@@ -153,9 +165,9 @@ object AerospikeStrategy {
     private val setName: String = "sliding_window_set"
     private val precision = underlying.window match {
       case Window.Second => 1
-      case Window.Minute => 60 // 1 minute -> 60 buckets (~ seconds)
+      case Window.Minute => 1 // 1 minute -> 60 buckets (~ seconds)
       case Window.Hour   => 60 // 1 hour -> 60 buckets (~ minutes)
-      case Window.Day    => 24 // 1 day -> 24 buckets (~ hours)
+      case Window.Day    => 3600 // 1 day -> 24 buckets (~ hours)
     }
 
     private val argsPart =
@@ -165,7 +177,9 @@ object AerospikeStrategy {
         Value.get(precision)
       )
 
-    override val luaScript: String = LuaScript.fixedWindow
+    override val expiration: Int = underlying.window.size.toInt
+
+    override val luaScript: String = LuaScript.slidingWindow
 
     override val serverPath: String = "sliding_window.lua"
 
@@ -178,10 +192,11 @@ object AerospikeStrategy {
     override def key[A: Key](namespace: String, value: A, instant: Instant): AKey =
       new AKey(namespace, setName, Key[A].convert(value))
 
-    override def permissionsArgs(instant: Instant): List[Value] = argsPart
+    override def permissionsArgs(instant: Instant): List[Value] =
+      Value.get(instant.getEpochSecond) :: argsPart
 
     override def acquireArgs(instant: Instant, cost: Long): List[Value] =
-      Value.get(instant.toEpochMilli) :: Value.get(cost) :: argsPart
+      Value.get(instant.getEpochSecond) :: Value.get(cost) :: argsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 
