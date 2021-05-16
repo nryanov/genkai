@@ -7,14 +7,12 @@ object LuaScript {
     """
       |local currentTokensBin = 'tokens'
       |local lastRefillTimeBin = 'refillTime'
-      |local highWatermarkBin = 'hw'
       |
       |local function createIfNotExists(r, currentTimestamp, maxTokens)
       |  if not aerospike:exists(r) then 
       |    aerospike:create(r)
       |    r[currentTokensBin] = maxTokens
       |    r[lastRefillTimeBin] = currentTimestamp    
-      |    r[highWatermarkBin] = currentTimestamp
       |  end
       |end
       |
@@ -32,14 +30,6 @@ object LuaScript {
       |
       |function acquire(r, currentTimestamp, cost, maxTokens, refillAmount, refillTime)
       |  createIfNotExists(r, currentTimestamp, maxTokens)
-      |  
-      |  local hw = r[highWatermarkBin]
-      |  
-      |  if hw > currentTimestamp then
-      |    aerospike:update(r)
-      |    return 0
-      |  end
-      |  
       |  refill(r, currentTimestamp, maxTokens, refillAmount, refillTime)
       |  
       |  local current = r[currentTokensBin]
@@ -55,11 +45,14 @@ object LuaScript {
       |end
       |
       |function permissions(r, currentTimestamp, maxTokens, refillAmount, refillTime)
-      |  createIfNotExists(r, currentTimestamp, maxTokens)
-      |  refill(r, currentTimestamp, maxTokens, refillAmount, refillTime)
-      |  
-      |  aerospike:update(r)
-      |  return r[currentTokensBin]
+      |  if not aerospike:exists(r) then
+      |    -- record does not exists yet, so permissions are not used
+      |    return maxTokens
+      |  else
+      |    refill(r, currentTimestamp, maxTokens, refillAmount, refillTime)  
+      |    aerospike:update(r)
+      |    return r[currentTokensBin]
+      |  end
       |end
       |""".stripMargin
 

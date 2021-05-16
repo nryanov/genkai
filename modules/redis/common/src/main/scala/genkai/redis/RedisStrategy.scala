@@ -79,11 +79,13 @@ object RedisStrategy {
     override def keys[A: Key](value: A, instant: Instant): List[String] =
       List(s"token_bucket:${Key[A].convert(value)}")
 
+    // for token bucket strategy we always need a current timestamp
     override def permissionsArgs(instant: Instant): List[String] =
-      instant.getEpochSecond.toString :: argsPart
+      Instant.now().getEpochSecond.toString :: argsPart
 
+    // for token bucket strategy we always need a current timestamp
     override def acquireArgs(instant: Instant, cost: Long): List[String] =
-      instant.getEpochSecond.toString :: cost.toString :: argsPart
+      Instant.now().getEpochSecond.toString :: cost.toString :: argsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 
