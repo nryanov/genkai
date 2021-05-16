@@ -180,9 +180,9 @@ object LuaScript {
       |    local blocks = math.ceil(windowSize / precision)
       |    local currentBlock = math.floor(instant / precision)
       |  
-      |    local trimBefore = currentBlock - blocks + 1  
+      |    local lastBlock = currentBlock - blocks + 1  
       |    local oldestBlock = r[oldestBlockBin]
-      |    oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
+      |    oldestBlock = oldestBlock and tonumber(oldestBlock) or lastBlock
       |    
       |    if oldestBlock > currentBlock then
       |      -- request in the past has no permissions
@@ -191,7 +191,7 @@ object LuaScript {
       |    
       |    -- count actual used tokens in previous reachable blocks
       |    local current = 0 
-      |    for block = trimBefore, currentBlock do
+      |    for block = lastBlock, currentBlock do
       |      local blockCount = r[block]
       |    
       |      if blockCount then

@@ -144,23 +144,6 @@ trait BaseSpec[F[_]]
     }
   }
 
-  test("[SlidingWindow] should not add extra acquiring if limit is reached") {
-    val limiter = rateLimiter(Strategy.SlidingWindow(1, Window.Minute))
-    val instant = Instant.now()
-
-    for {
-      r1 <- toFuture(limiter.acquire("key", instant))
-      r2 <- toFuture(limiter.permissions("key"))
-      r3 <- toFuture(limiter.acquire("key", instant))
-      r4 <- toFuture(limiter.acquire("key", instant.plusSeconds(61)))
-    } yield {
-      r1 shouldBe true
-      r2 shouldBe 0L
-      r3 shouldBe false
-      r4 shouldBe true
-    }
-  }
-
   for (
     strategy <- Seq(
       Strategy.TokenBucket(3, 1, 10 minutes),
@@ -199,6 +182,72 @@ trait BaseSpec[F[_]]
         r2 shouldBe 3L
       }
     }
+
+  test("[FixedWindow] should update high watermark when new window starts") {
+    val limiter = rateLimiter(Strategy.FixedWindow(1, Window.Hour))
+    val instant = Instant.now()
+
+    for {
+      p1 <- toFuture(limiter.permissions("key", instant))
+      a1 <- toFuture(limiter.acquire("key", instant))
+      a2 <- toFuture(limiter.acquire("key", instant))
+      p2 <- toFuture(limiter.permissions("key", instant))
+      a3 <- toFuture(limiter.acquire("key", instant.plus(1, ChronoUnit.HOURS)))
+    } yield {
+      p1 shouldBe 1L
+      a1 shouldBe true
+      a2 shouldBe false
+      p2 shouldBe 0L
+      a3 shouldBe true
+    }
+  }
+
+  for {
+    window <- Seq(Window.Minute, Window.Hour, Window.Day)
+  } yield test(
+    s"[SlidingWindow][${window.unit.toString}] should clean up old buckets and correctly count used tokens"
+  ) {
+    val limiter = rateLimiter(Strategy.SlidingWindow(10, window))
+    val instant = Instant.now()
+
+    val (chronoUnit, firstStep, secondStep, thirdStep) = window match {
+      case Window.Second => (ChronoUnit.SECONDS, 1, 1, 1) // not used
+      case Window.Minute => (ChronoUnit.SECONDS, 10, 20, 70)
+      case Window.Hour   => (ChronoUnit.MINUTES, 10, 20, 70)
+      case Window.Day    => (ChronoUnit.HOURS, 1, 2, 25)
+    }
+
+    for {
+      a1 <- toFuture(limiter.acquire("key", instant.plus(firstStep, chronoUnit)))
+      a2 <- toFuture(limiter.acquire("key", instant.plus(secondStep, chronoUnit)))
+      p1 <- toFuture(limiter.permissions("key", instant.plus(secondStep, chronoUnit)))
+      a3 <- toFuture(limiter.acquire("key", instant.plus(thirdStep, chronoUnit)))
+      p2 <- toFuture(limiter.permissions("key", instant.plus(thirdStep, chronoUnit)))
+    } yield {
+      a1 shouldBe true
+      a2 shouldBe true
+      p1 shouldBe 8L
+      a3 shouldBe true
+      p2 shouldBe 8L
+    }
+  }
+
+  test("[SlidingWindow] should not add extra acquiring if limit is reached") {
+    val limiter = rateLimiter(Strategy.SlidingWindow(1, Window.Minute))
+    val instant = Instant.now()
+
+    for {
+      r1 <- toFuture(limiter.acquire("key", instant))
+      r2 <- toFuture(limiter.permissions("key"))
+      r3 <- toFuture(limiter.acquire("key", instant))
+      r4 <- toFuture(limiter.acquire("key", instant.plusSeconds(61)))
+    } yield {
+      r1 shouldBe true
+      r2 shouldBe 0L
+      r3 shouldBe false
+      r4 shouldBe true
+    }
+  }
 
   // fixme
   ignore("[TokenBucket] should refresh tokens after delay") {

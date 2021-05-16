@@ -239,12 +239,12 @@ object LuaScript {
       |local blocks = math.ceil(windowSize / precision)
       |
       |local currentBlock = math.floor(instant / precision)
-      |local trimBefore = currentBlock - blocks + 1
+      |local lastBlock = currentBlock - blocks + 1
       |local usedTokensKey = 'ut'
       |local oldestBlockKey = 'ob'
       |
       |local oldestBlock = redis.call('HGET', key, oldestBlockKey)
-      |oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
+      |oldestBlock = oldestBlock and tonumber(oldestBlock) or lastBlock
       |if oldestBlock > currentBlock then
       |  -- request in the past has no permissions
       |  return 0
@@ -252,7 +252,7 @@ object LuaScript {
       |
       |-- count actual used tokens in previous reachable blocks
       |local current = 0 
-      |for block = trimBefore, currentBlock do
+      |for block = lastBlock, currentBlock do
       |  local bKey = usedTokensKey .. block
       |  local bCount = redis.call('HGET', key, bKey)
       |  if bCount then
