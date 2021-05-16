@@ -5,8 +5,8 @@ import genkai.monad.{EitherMonadError, MonadError}
 
 final class EitherRateLimiter(rateLimiter: RateLimiter[Identity])
     extends RateLimiter[Either[Throwable, *]] {
-  override def permissions[A: Key](key: A): Either[Throwable, Long] =
-    monadError.eval(rateLimiter.permissions(key))
+  override def permissions[A: Key](key: A, instant: Instant): Either[Throwable, Long] =
+    monadError.eval(rateLimiter.permissions(key, instant))
 
   override def reset[A: Key](key: A): Either[Throwable, Unit] =
     monadError.eval(rateLimiter.reset(key))

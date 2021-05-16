@@ -20,10 +20,9 @@ abstract class AerospikeRateLimiter[F[_]](
   private val writePolicy = new WritePolicy(client.writePolicyDefault)
   writePolicy.expiration = strategy.expiration
 
-  override def permissions[A: Key](key: A): F[Long] = {
-    val now = Instant.now()
-    val keyStr = strategy.key(namespace, key, now)
-    val args = strategy.permissionsArgs(now)
+  override def permissions[A: Key](key: A, instant: Instant): F[Long] = {
+    val keyStr = strategy.key(namespace, key, instant)
+    val args = strategy.permissionsArgs(instant)
 
     debug(s"Permissions request ($keyStr): $args") *> monad
       .eval(

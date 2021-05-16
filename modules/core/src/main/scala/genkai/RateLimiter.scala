@@ -14,8 +14,15 @@ trait RateLimiter[F[_]] {
    * @tparam A - key type with implicit [[genkai.Key]] type class instance
    * @return - unused permissions
    */
-  // todo: allow to pass Instant
-  def permissions[A: Key](key: A): F[Long]
+  final def permissions[A: Key](key: A): F[Long] = permissions(key, Instant.now())
+
+  /**
+   * @param key - ~ object id
+   * @param instant - request time
+   * @tparam A - key type with implicit [[genkai.Key]] type class instance
+   * @return - unused permissions
+   */
+  def permissions[A: Key](key: A, instant: Instant): F[Long]
 
   /**
    * @param key - ~ object id

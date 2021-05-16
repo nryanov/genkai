@@ -9,8 +9,8 @@ import scala.util.Try
 final class TryRateLimiter(
   rateLimiter: RateLimiter[Identity]
 ) extends RateLimiter[Try] {
-  override def permissions[A: Key](key: A): Try[Long] =
-    monadError.eval(rateLimiter.permissions(key))
+  override def permissions[A: Key](key: A, instant: Instant): Try[Long] =
+    monadError.eval(rateLimiter.permissions(key, instant))
 
   override def reset[A: Key](key: A): Try[Unit] = monadError.eval(rateLimiter.reset(key))
 

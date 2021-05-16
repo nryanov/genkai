@@ -22,11 +22,9 @@ abstract class LettuceRateLimiter[F[_]](
 
   private val syncCommands = connection.sync()
 
-  override def permissions[A: Key](key: A): F[Long] = {
-    val now = Instant.now()
-
-    val keyStr = strategy.keys(key, now)
-    val args = strategy.permissionsArgs(now)
+  override def permissions[A: Key](key: A, instant: Instant): F[Long] = {
+    val keyStr = strategy.keys(key, instant)
+    val args = strategy.permissionsArgs(instant)
 
     debug(s"Permissions request ($keyStr): $args") *> monad
       .eval(
