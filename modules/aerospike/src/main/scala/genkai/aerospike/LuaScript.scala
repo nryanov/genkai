@@ -91,10 +91,17 @@ object LuaScript {
       |  end
       |end
       |
-      |function permissions(r, maxTokens)
+      |function permissions(r, windowStartTs, maxTokens)
       |  if not aerospike:exists(r) then 
       |    return maxTokens
       |  else
+      |    local hw = r[highWatermarkBin]
+      |  
+      |    -- request in the past has no permissions
+      |    if hw > windowStartTs then
+      |     return 0
+      |    end
+      |    
       |    return math.max(0, maxTokens - r[usedTokensBin])
       |  end
       |end
@@ -131,11 +138,11 @@ object LuaScript {
       |  end
       |end
       |
-      |function acquire(r, currentTimestamp, cost, maxTokens, windowSize, precision)
+      |function acquire(r, instant, cost, maxTokens, windowSize, precision)
       |  createIfNotExists(r)
       |
       |  local blocks = math.ceil(windowSize / precision)
-      |  local currentBlock = math.floor(currentTimestamp / precision)
+      |  local currentBlock = math.floor(instant / precision)
       |  
       |  local trimBefore = currentBlock - blocks + 1  
       |  local oldestBlock = r[oldestBlockBin]
@@ -160,16 +167,21 @@ object LuaScript {
       |  return 1
       |end
       |
-      |function permissions(r, currentTimestamp, maxTokens, windowSize, precision)
+      |function permissions(r, instant, maxTokens, windowSize, precision)
       |  if not aerospike:exists(r) then
       |    return maxTokens
       |  else
       |    local blocks = math.ceil(windowSize / precision)
-      |    local currentBlock = math.floor(currentTimestamp / precision)
+      |    local currentBlock = math.floor(instant / precision)
       |  
       |    local trimBefore = currentBlock - blocks + 1  
       |    local oldestBlock = r[oldestBlockBin]
       |    oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
+      |    
+      |    if oldestBlock > currentBlock then
+      |      -- request in the past has no permissions
+      |      return 0
+      |    end
       |    
       |    cleanup(r, trimBefore, oldestBlock, blocks)
       |  

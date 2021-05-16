@@ -118,18 +118,27 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * args: key, maxTokens
+   * args: key, windowTs, maxTokens
    * key format: fixed_window:<key>:<timestamp> where <timestamp> is truncated to the beginning of the window
    * @return - permissions
    */
   val fixedWindowPermissions: String =
     """
-      |local maxTokens = tonumber(ARGV[1])
+      |local windowTs = tonumber(ARGV[1])
+      |local maxTokens = tonumber(ARGV[2])
       |local isExists = redis.call('EXISTS', KEYS[1])
       |
       |if isExists == 0 then 
       |  return maxTokens
       |else
+      |  local hw = redis.call('HGET', KEYS[1], 'hw')
+      |  hw = hw and tonumber(hw) or windowTs 
+      |
+      |  -- request in the past has no permissions
+      |  if hw > windowTs then
+      |    return 0
+      |  end
+      |
       |  local used = redis.call('HGET', KEYS[1], 'usedTokens')
       |  used = used and tonumber(used) or 0
       |  return math.max(0, maxTokens - used)
@@ -137,7 +146,7 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * input: key, currentTimestamp, cost, maxTokens, windowSize, precision, ttl
+   * input: key, instant, cost, maxTokens, windowSize, precision, ttl
    * key format: sliding_window:<key>
    * @return - 1 if token acquired, 0 - otherwise
    */
@@ -145,7 +154,7 @@ object LuaScript {
   val slidingWindowAcquire: String =
     """
       |local key = KEYS[1]
-      |local currentTimestamp = tonumber(ARGV[1])
+      |local instant = tonumber(ARGV[1])
       |local cost = tonumber(ARGV[2])
       |local maxTokens = tonumber(ARGV[3])
       |local windowSize = tonumber(ARGV[4])
@@ -154,7 +163,7 @@ object LuaScript {
       |
       |local blocks = math.ceil(windowSize / precision)
       |
-      |local currentBlock = math.floor(currentTimestamp / precision)
+      |local currentBlock = math.floor(instant / precision)
       |local trimBefore = currentBlock - blocks + 1
       |local usedTokensKey = 'ut'
       |local oldestBlockKey = 'ob'
@@ -200,21 +209,26 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * input: key, currentTimestamp, maxTokens, windowSize, precision
+   * input: key, instant, maxTokens, windowSize, precision
    * key format: sliding_window:<key>
    * @return - permissions
    */
   val slidingWindowPermissions: String =
     """
       |local key = KEYS[1]
-      |local currentTimestamp = tonumber(ARGV[1])
+      |local instant = tonumber(ARGV[1])
       |local maxTokens = tonumber(ARGV[2])
       |local windowSize = tonumber(ARGV[3])
       |local precision = tonumber(ARGV[4])
       |
+      |local isExists = redis.call('EXISTS', KEYS[1])
+      |if isExists == 0 then
+      |  return maxTokens
+      |end
+      |
       |local blocks = math.ceil(windowSize / precision)
       |
-      |local currentBlock = math.floor(currentTimestamp / precision)
+      |local currentBlock = math.floor(instant / precision)
       |local trimBefore = currentBlock - blocks + 1
       |local usedTokensKey = 'ut'
       |local oldestBlockKey = 'ob'
@@ -222,6 +236,7 @@ object LuaScript {
       |local oldestBlock = redis.call('HGET', key, oldestBlockKey)
       |oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
       |if oldestBlock > currentBlock then
+      |  -- request in the past has no permissions
       |  return 0
       |end
       |

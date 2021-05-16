@@ -108,7 +108,10 @@ object RedisStrategy {
     override def keys[A: Key](value: A, instant: Instant): List[String] =
       List(s"fixed_window:${Key[A].convert(value)}")
 
-    override def permissionsArgs(instant: Instant): List[String] = permissionArgsPart
+    override def permissionsArgs(instant: Instant): List[String] = {
+      val windowStartTs = instant.truncatedTo(underlying.window.unit).getEpochSecond.toString
+      windowStartTs :: permissionArgsPart
+    }
 
     override def acquireArgs(instant: Instant, cost: Long): List[String] = {
       val windowStartTs = instant.truncatedTo(underlying.window.unit).getEpochSecond.toString
