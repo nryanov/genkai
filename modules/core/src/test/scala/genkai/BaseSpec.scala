@@ -183,22 +183,36 @@ trait BaseSpec[F[_]]
       }
     }
 
-  test("[FixedWindow] should update high watermark when new window starts") {
-    val limiter = rateLimiter(Strategy.FixedWindow(1, Window.Hour))
+  for {
+    window <- Seq(Window.Second, Window.Minute, Window.Hour, Window.Day)
+  } yield test(
+    s"[FixedWindow][${window.unit.toString}] should correctly starts next window with fresh tokens"
+  ) {
+    val limiter = rateLimiter(Strategy.FixedWindow(10, window))
     val instant = Instant.now()
+
+    val chronoUnit = window match {
+      case Window.Second => ChronoUnit.SECONDS
+      case Window.Minute => ChronoUnit.MINUTES
+      case Window.Hour   => ChronoUnit.HOURS
+      case Window.Day    => ChronoUnit.DAYS
+    }
 
     for {
       p1 <- toFuture(limiter.permissions("key", instant))
       a1 <- toFuture(limiter.acquire("key", instant))
       a2 <- toFuture(limiter.acquire("key", instant))
       p2 <- toFuture(limiter.permissions("key", instant))
-      a3 <- toFuture(limiter.acquire("key", instant.plus(1, ChronoUnit.HOURS)))
+      // begin next window
+      a3 <- toFuture(limiter.acquire("key", instant.plus(1, chronoUnit)))
+      p3 <- toFuture(limiter.permissions("key", instant.plus(1, chronoUnit)))
     } yield {
-      p1 shouldBe 1L
+      p1 shouldBe 10L
       a1 shouldBe true
-      a2 shouldBe false
-      p2 shouldBe 0L
+      a2 shouldBe true
+      p2 shouldBe 8L
       a3 shouldBe true
+      p3 shouldBe 9L
     }
   }
 
