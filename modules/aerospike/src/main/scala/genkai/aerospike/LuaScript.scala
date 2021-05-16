@@ -188,8 +188,18 @@ object LuaScript {
       |      -- request in the past has no permissions
       |      return 0
       |    end
+      |    
+      |    -- count actual used tokens in previous reachable blocks
+      |    local current = 0 
+      |    for block = trimBefore, currentBlock do
+      |      local blockCount = r[block]
+      |    
+      |      if blockCount then
+      |        current = current + tonumber(blockCount)
+      |      end
+      |    end
       |      
-      |    return math.max(0, maxTokens - r[usedTokensBin])
+      |    return math.max(0, maxTokens - current)
       |  end
       |end
       |""".stripMargin

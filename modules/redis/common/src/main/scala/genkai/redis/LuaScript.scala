@@ -250,9 +250,16 @@ object LuaScript {
       |  return 0
       |end
       |
-      |local usedTokens = redis.call('HGET', key, usedTokensKey)
-      |usedTokens = tonumber(usedTokens or '0')
+      |-- count actual used tokens in previous reachable blocks
+      |local current = 0 
+      |for block = trimBefore, currentBlock do
+      |  local bKey = usedTokensKey .. block
+      |  local bCount = redis.call('HGET', key, bKey)
+      |  if bCount then
+      |    current = current + tonumber(bCount)
+      |  end
+      |end
       |
-      |return math.max(0, maxTokens - usedTokens);
+      |return math.max(0, maxTokens - current);
       |""".stripMargin
 }
