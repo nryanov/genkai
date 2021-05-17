@@ -1,0 +1,41 @@
+package genkai
+
+import java.time.Instant
+
+import genkai.monad.{MonadError, TryMonadError}
+
+import scala.util.{Failure, Success, Try}
+
+final class TryConcurrentRateLimiter(concurrentRateLimiter: ConcurrentRateLimiter[Identity])
+    extends ConcurrentRateLimiter[Try] {
+  override private[genkai] def use[A: Key, B](key: A, instant: Instant)(
+    f: => Try[B]
+  ): Try[Either[ConcurrentLimitExhausted[A], B]] =
+    monadError.eval(concurrentRateLimiter.use(key, instant)(f)).flatMap {
+      case Left(value) => Success(Left(value))
+      case Right(value) =>
+        value match {
+          case Failure(exception) => Failure(exception)
+          case Success(value)     => Success(Right(value))
+        }
+    }
+
+  override private[genkai] def acquire[A: Key](
+    key: A,
+    instant: Instant
+  ): Try[Either[ConcurrentLimitExhausted[A], Boolean]] =
+    monadError.eval(concurrentRateLimiter.acquire(key, instant))
+
+  override private[genkai] def release[A: Key](
+    key: A,
+    instant: Instant
+  ): Try[Either[ConcurrentLimitExhausted[A], Boolean]] =
+    monadError.eval(concurrentRateLimiter.release(key, instant))
+
+  override def permissions[A: Key](key: A): Try[Long] =
+    monadError.eval(concurrentRateLimiter.permissions(key))
+
+  override def close(): Try[Unit] = monadError.eval(concurrentRateLimiter.close())
+
+  override protected def monadError: MonadError[Try] = TryMonadError
+}
