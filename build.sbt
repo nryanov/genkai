@@ -11,7 +11,7 @@ lazy val monixVersion = "3.3.0"
 // logging
 lazy val slf4jApiVersion = "1.7.30"
 // test
-lazy val scalatestVersion = "3.2.8"
+lazy val scalatestVersion = "3.2.9"
 lazy val scalamockVersion = "5.1.0"
 lazy val scalacheckPlusVersion = "3.2.2.0"
 lazy val scalacheckVersion = "1.14.3"
