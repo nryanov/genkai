@@ -16,6 +16,8 @@ trait ConcurrentRateLimiter[F[_]] {
     f: => F[B]
   ): F[Either[ConcurrentLimitExhausted[A], B]]
 
+  def reset[A: Key](key: A): F[Unit]
+
   final def acquire[A: Key](key: A): F[Either[ConcurrentLimitExhausted[A], Boolean]] =
     acquire(key, Instant.now())
 

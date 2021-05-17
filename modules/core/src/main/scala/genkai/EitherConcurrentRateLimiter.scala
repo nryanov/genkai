@@ -21,6 +21,9 @@ class EitherConcurrentRateLimiter(concurrentRateLimiter: ConcurrentRateLimiter[I
         }
     }
 
+  override def reset[A: Key](key: A): Either[Throwable, Unit] =
+    monadError.eval(concurrentRateLimiter.reset(key))
+
   override private[genkai] def acquire[A: Key](
     key: A,
     instant: Instant

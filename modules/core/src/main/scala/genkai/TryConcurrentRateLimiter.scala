@@ -26,6 +26,8 @@ final class TryConcurrentRateLimiter(concurrentRateLimiter: ConcurrentRateLimite
   ): Try[Either[ConcurrentLimitExhausted[A], Boolean]] =
     monadError.eval(concurrentRateLimiter.acquire(key, instant))
 
+  override def reset[A: Key](key: A): Try[Unit] = monadError.eval(concurrentRateLimiter.reset(key))
+
   override private[genkai] def release[A: Key](
     key: A,
     instant: Instant
