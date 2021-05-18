@@ -69,7 +69,7 @@ object RedisStrategy {
     private val argsPart = List(
       underlying.tokens.toString,
       underlying.refillAmount.toString,
-      underlying.refillDelay.toMillis.toString
+      underlying.refillDelay.toSeconds.toString
     )
 
     override val acquireLuaScript: String = LuaScript.tokenBucketAcquire
@@ -80,10 +80,10 @@ object RedisStrategy {
       List(s"token_bucket:${Key[A].convert(value)}")
 
     override def permissionsArgs(instant: Instant): List[String] =
-      instant.toEpochMilli.toString :: argsPart
+      instant.getEpochSecond.toString :: argsPart
 
     override def acquireArgs(instant: Instant, cost: Long): List[String] =
-      instant.toEpochMilli.toString :: cost.toString :: argsPart
+      instant.getEpochSecond.toString :: cost.toString :: argsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 
@@ -92,7 +92,7 @@ object RedisStrategy {
 
   final case class RedisFixedWindow(underlying: Strategy.FixedWindow) extends RedisStrategy {
     private val permissionArgsPart =
-      List(underlying.tokens.toString)
+      List(underlying.tokens.toString, underlying.window.size.toString)
     private val acquireArgsPart =
       List(
         underlying.tokens.toString,
@@ -103,16 +103,18 @@ object RedisStrategy {
 
     override val permissionsLuaScript: String = LuaScript.fixedWindowPermissions
 
-    override def keys[A: Key](value: A, instant: Instant): List[String] = {
+    override def keys[A: Key](value: A, instant: Instant): List[String] =
+      List(s"fixed_window:${Key[A].convert(value)}")
 
-      val ts = instant.truncatedTo(underlying.window.unit).toEpochMilli
-      List(s"fixed_window:${Key[A].convert(value)}:$ts")
+    override def permissionsArgs(instant: Instant): List[String] = {
+      val windowStartTs = instant.truncatedTo(underlying.window.unit).getEpochSecond.toString
+      windowStartTs :: permissionArgsPart
     }
 
-    override def permissionsArgs(instant: Instant): List[String] = permissionArgsPart
-
-    override def acquireArgs(instant: Instant, cost: Long): List[String] =
-      cost.toString :: acquireArgsPart
+    override def acquireArgs(instant: Instant, cost: Long): List[String] = {
+      val windowStartTs = instant.truncatedTo(underlying.window.unit).getEpochSecond.toString
+      windowStartTs :: cost.toString :: acquireArgsPart
+    }
 
     override def isAllowed(value: Long): Boolean = value != 0
 
@@ -122,9 +124,9 @@ object RedisStrategy {
   final case class RedisSlidingWindow(underlying: Strategy.SlidingWindow) extends RedisStrategy {
     private val precision = underlying.window match {
       case Window.Second => 1
-      case Window.Minute => 60 // 1 minute -> 60 buckets (~ seconds)
+      case Window.Minute => 1 // 1 minute -> 60 buckets (~ seconds)
       case Window.Hour   => 60 // 1 hour -> 60 buckets (~ minutes)
-      case Window.Day    => 24 // 1 day -> 24 buckets (~ hours)
+      case Window.Day    => 3600 // 1 day -> 24 buckets (~ hours)
     }
 
     private val permissionArgsPart =
@@ -149,10 +151,10 @@ object RedisStrategy {
       List(s"sliding_window:${Key[A].convert(value)}")
 
     override def permissionsArgs(instant: Instant): List[String] =
-      instant.toEpochMilli.toString :: permissionArgsPart
+      instant.getEpochSecond.toString :: permissionArgsPart
 
     override def acquireArgs(instant: Instant, cost: Long): List[String] =
-      instant.toEpochMilli.toString :: cost.toString :: acquireArgsPart
+      instant.getEpochSecond.toString :: cost.toString :: acquireArgsPart
 
     override def isAllowed(value: Long): Boolean = value != 0
 

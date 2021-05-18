@@ -17,18 +17,16 @@ abstract class JedisRateLimiter[F[_]](
   permissionsSha: String
 ) extends RateLimiter[F]
     with Logging[F] {
-  override def permissions[A: Key](key: A): F[Long] = {
-    val now = Instant.now()
+  override private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long] =
     useClient { client =>
-      val keys = strategy.keys(key, now)
-      val args = keys ::: strategy.permissionsArgs(now)
+      val keys = strategy.keys(key, instant)
+      val args = keys ::: strategy.permissionsArgs(instant)
 
       for {
         _ <- debug(s"Permissions request: $args")
         tokens <- monad.eval(client.evalsha(permissionsSha, keys.size, args: _*))
       } yield strategy.toPermissions(tokens.toString.toLong)
     }
-  }
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
@@ -38,7 +36,7 @@ abstract class JedisRateLimiter[F[_]](
     )
   }
 
-  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
+  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
     useClient { client =>
       val keys = strategy.keys(key, instant)
       val args = keys ::: strategy.acquireArgs(instant, cost)
