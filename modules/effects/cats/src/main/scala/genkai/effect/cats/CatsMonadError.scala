@@ -1,6 +1,6 @@
 package genkai.effect.cats
 
-import cats.effect.{Blocker, ContextShift, Sync}
+import cats.effect.Sync
 import genkai.monad.MonadError
 
 final class CatsMonadError[F[_]: ContextShift](blocker: Blocker)(implicit F: Sync[F])
@@ -37,7 +37,7 @@ final class CatsMonadError[F[_]: ContextShift](blocker: Blocker)(implicit F: Syn
 
   override def void[A](fa: F[A]): F[Unit] = F.void(fa)
 
-  override def eval[A](f: => A): F[A] = blocker.delay(f)
+  override def eval[A](f: => A): F[A] = Sync[F].blocking(f)
 
   override def unit: F[Unit] = F.unit
 
@@ -45,5 +45,5 @@ final class CatsMonadError[F[_]: ContextShift](blocker: Blocker)(implicit F: Syn
 
   override def flatten[A](fa: F[F[A]]): F[A] = F.flatten(fa)
 
-  override def guarantee[A](f: F[A])(g: => F[Unit]): F[A] = F.guarantee(f)(g)
+  override def guarantee[A](f: F[A])(g: => F[Unit]): F[A] = F.guarantee(f, g)
 }

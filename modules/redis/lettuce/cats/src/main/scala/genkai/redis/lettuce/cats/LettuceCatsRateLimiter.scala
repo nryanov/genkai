@@ -1,6 +1,6 @@
 package genkai.redis.lettuce.cats
 
-import cats.effect.{Blocker, ContextShift, Resource, Sync}
+import cats.effect.{Resource, Sync}
 import genkai.Strategy
 import genkai.monad.syntax._
 import genkai.effect.cats.CatsMonadError
@@ -30,9 +30,7 @@ class LettuceCatsRateLimiter[F[_]: Sync: ContextShift] private (
 object LettuceCatsRateLimiter {
   def useClient[F[_]: Sync: ContextShift](
     client: RedisClient,
-    strategy: Strategy,
-    blocker: Blocker
-  ): F[LettuceCatsRateLimiter[F]] = {
+    strategy: Strategy): F[LettuceCatsRateLimiter[F]] = {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F](blocker)
 
     val redisStrategy = RedisStrategy(strategy)
@@ -59,9 +57,7 @@ object LettuceCatsRateLimiter {
 
   def resource[F[_]: Sync: ContextShift](
     redisUri: String,
-    strategy: Strategy,
-    blocker: Blocker
-  ): Resource[F, LettuceCatsRateLimiter[F]] = {
+    strategy: Strategy): Resource[F, LettuceCatsRateLimiter[F]] = {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F](blocker)
 
     val redisStrategy = RedisStrategy(strategy)
