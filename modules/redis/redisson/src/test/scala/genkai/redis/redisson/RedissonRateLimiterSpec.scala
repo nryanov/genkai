@@ -5,7 +5,7 @@ import org.redisson.Redisson
 import org.redisson.api.RedissonClient
 import org.redisson.config.Config
 
-trait RedissonSpec[F[_]] extends RedisRateLimiterSpecForAll[F] {
+trait RedissonRateLimiterSpec[F[_]] extends RedisRateLimiterSpecForAll[F] {
   var redisClient: RedissonClient = _
 
   override def afterContainersStart(redis: RedisContainer): Unit = {

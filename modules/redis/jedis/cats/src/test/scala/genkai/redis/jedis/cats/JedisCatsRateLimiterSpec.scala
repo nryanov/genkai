@@ -3,11 +3,11 @@ package genkai.redis.jedis.cats
 import cats.effect.IO
 import genkai.effect.cats.CatsBaseSpec
 import genkai.{RateLimiter, Strategy}
-import genkai.redis.jedis.JedisSpec
+import genkai.redis.jedis.JedisRateLimiterSpec
 
 import scala.concurrent.Future
 
-class JedisCatsRateLimiterSpec extends JedisSpec[IO] with CatsBaseSpec {
+class JedisCatsRateLimiterSpec extends JedisRateLimiterSpec[IO] with CatsBaseSpec {
   override def rateLimiter(strategy: Strategy): RateLimiter[IO] =
     JedisCatsRateLimiter.useClient[IO](jedisPool, strategy, blocker).unsafeRunSync()
 

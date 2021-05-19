@@ -44,5 +44,5 @@ class EitherConcurrentRateLimiter(concurrentRateLimiter: ConcurrentRateLimiter[I
 
   override def close(): Either[Throwable, Unit] = monadError.eval(concurrentRateLimiter.close())
 
-  override protected def monadError: MonadError[Either[Throwable, *]] = EitherMonadError
+  override def monadError: MonadError[Either[Throwable, *]] = EitherMonadError
 }

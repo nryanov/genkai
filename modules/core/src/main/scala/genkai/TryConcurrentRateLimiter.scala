@@ -39,5 +39,5 @@ final class TryConcurrentRateLimiter(concurrentRateLimiter: ConcurrentRateLimite
 
   override def close(): Try[Unit] = monadError.eval(concurrentRateLimiter.close())
 
-  override protected def monadError: MonadError[Try] = TryMonadError
+  override def monadError: MonadError[Try] = TryMonadError
 }

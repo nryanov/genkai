@@ -74,6 +74,10 @@ sealed trait RedisConcurrentStrategy {
 }
 
 object RedisConcurrentStrategy {
+  def apply(underlying: ConcurrentStrategy): RedisConcurrentStrategy = underlying match {
+    case s: ConcurrentStrategy.Default => RedisDefault(s)
+  }
+
   final case class RedisDefault(underlying: ConcurrentStrategy.Default)
       extends RedisConcurrentStrategy {
     private val argsPart = List(
