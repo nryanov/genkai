@@ -1,11 +1,11 @@
 package genkai.redis.redisson
 
-import genkai.redis.{RedisContainer, RedisSpecForAll}
+import genkai.redis.{RedisContainer, RedisRateLimiterSpecForAll}
 import org.redisson.Redisson
 import org.redisson.api.RedissonClient
 import org.redisson.config.Config
 
-trait RedissonSpec[F[_]] extends RedisSpecForAll[F] {
+trait RedissonSpec[F[_]] extends RedisRateLimiterSpecForAll[F] {
   var redisClient: RedissonClient = _
 
   override def afterContainersStart(redis: RedisContainer): Unit = {

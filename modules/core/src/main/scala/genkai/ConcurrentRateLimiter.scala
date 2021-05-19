@@ -18,25 +18,27 @@ trait ConcurrentRateLimiter[F[_]] {
 
   def reset[A: Key](key: A): F[Unit]
 
-  final def acquire[A: Key](key: A): F[Either[ConcurrentLimitExhausted[A], Boolean]] =
+  final def acquire[A: Key](key: A): F[Boolean] =
     acquire(key, Instant.now())
 
   private[genkai] def acquire[A: Key](
     key: A,
     instant: Instant
-  ): F[Either[ConcurrentLimitExhausted[A], Boolean]]
+  ): F[Boolean]
 
-  final def release[A: Key](key: A): F[Either[ConcurrentLimitExhausted[A], Boolean]] =
+  final def release[A: Key](key: A): F[Boolean] =
     release(key, Instant.now())
 
   private[genkai] def release[A: Key](
     key: A,
     instant: Instant
-  ): F[Either[ConcurrentLimitExhausted[A], Boolean]]
+  ): F[Boolean]
 
-  def permissions[A: Key](key: A): F[Long]
+  final def permissions[A: Key](key: A): F[Long] = permissions(key, Instant.now())
+
+  private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long]
 
   def close(): F[Unit]
 
-  protected def monadError: MonadError[F]
+  def monadError: MonadError[F]
 }

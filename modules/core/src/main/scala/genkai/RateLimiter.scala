@@ -77,5 +77,5 @@ trait RateLimiter[F[_]] {
    */
   def close(): F[Unit]
 
-  protected def monadError: MonadError[F]
+  def monadError: MonadError[F]
 }

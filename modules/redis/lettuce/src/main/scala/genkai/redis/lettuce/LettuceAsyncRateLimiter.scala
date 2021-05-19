@@ -104,5 +104,5 @@ abstract class LettuceAsyncRateLimiter[F[_]](
       }
     )
 
-  override protected def monadError: MonadError[F] = monad
+  override def monadError: MonadError[F] = monad
 }

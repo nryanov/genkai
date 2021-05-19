@@ -1,9 +1,9 @@
 package genkai.redis.lettuce
 
-import genkai.redis.{RedisContainer, RedisSpecForAll}
+import genkai.redis.{RedisContainer, RedisRateLimiterSpecForAll}
 import io.lettuce.core.RedisClient
 
-trait LettuceSpec[F[_]] extends RedisSpecForAll[F] {
+trait LettuceSpec[F[_]] extends RedisRateLimiterSpecForAll[F] {
   var redisClient: RedisClient = _
 
   override def afterContainersStart(redis: RedisContainer): Unit =

@@ -76,25 +76,37 @@ sealed trait RedisConcurrentStrategy {
 object RedisConcurrentStrategy {
   final case class RedisDefault(underlying: ConcurrentStrategy.Default)
       extends RedisConcurrentStrategy {
+    private val argsPart = List(
+      underlying.slots.toString,
+      underlying.ttl.toMillis.toString
+    )
 
-    override def acquireLuaScript: String = ???
+    private val releaseArgsPart = List(
+      underlying.ttl.toMillis.toString
+    )
 
-    override def releaseLuaScript: String = ???
+    override def acquireLuaScript: String = LuaScript.concurrentRateLimiterAcquire
 
-    override def permissionsLuaScript: String = ???
+    override def releaseLuaScript: String = LuaScript.concurrentRateLimiterRelease
 
-    override def keys[A: Key](value: A, instant: Instant): List[String] = ???
+    override def permissionsLuaScript: String = LuaScript.concurrentRateLimiterPermissions
 
-    override def permissionsArgs(instant: Instant): List[String] = ???
+    override def keys[A: Key](value: A, instant: Instant): List[String] =
+      List(Key[A].convert(value))
 
-    override def acquireArgs(instant: Instant): List[String] = ???
+    override def permissionsArgs(instant: Instant): List[String] =
+      instant.toEpochMilli.toString :: argsPart
 
-    override def releaseArgs(instant: Instant): List[String] = ???
+    override def acquireArgs(instant: Instant): List[String] =
+      instant.toEpochMilli.toString :: argsPart
 
-    override def isAllowed(value: Long): Boolean = ???
+    override def releaseArgs(instant: Instant): List[String] =
+      instant.toEpochMilli.toString :: releaseArgsPart
 
-    override def isReleased(value: Long): Boolean = ???
+    override def isAllowed(value: Long): Boolean = value == 1L
 
-    override def toPermissions(value: Long): Long = ???
+    override def isReleased(value: Long): Boolean = value == 1L
+
+    override def toPermissions(value: Long): Long = value
   }
 }

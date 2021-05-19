@@ -27,17 +27,20 @@ class EitherConcurrentRateLimiter(concurrentRateLimiter: ConcurrentRateLimiter[I
   override private[genkai] def acquire[A: Key](
     key: A,
     instant: Instant
-  ): Either[Throwable, Either[ConcurrentLimitExhausted[A], Boolean]] =
+  ): Either[Throwable, Boolean] =
     monadError.eval(concurrentRateLimiter.acquire(key, instant))
 
   override private[genkai] def release[A: Key](
     key: A,
     instant: Instant
-  ): Either[Throwable, Either[ConcurrentLimitExhausted[A], Boolean]] =
+  ): Either[Throwable, Boolean] =
     monadError.eval(concurrentRateLimiter.release(key, instant))
 
-  override def permissions[A: Key](key: A): Either[Throwable, Long] =
-    monadError.eval(concurrentRateLimiter.permissions(key))
+  override private[genkai] def permissions[A: Key](
+    key: A,
+    instant: Instant
+  ): Either[Throwable, Long] =
+    monadError.eval(concurrentRateLimiter.permissions(key, instant))
 
   override def close(): Either[Throwable, Unit] = monadError.eval(concurrentRateLimiter.close())
 

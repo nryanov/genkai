@@ -94,7 +94,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
     monad.unit
   )
 
-  override protected def monadError: MonadError[F] = monad
+  override def monadError: MonadError[F] = monad
 
   private def evalShaAsync(
     sha: String,
