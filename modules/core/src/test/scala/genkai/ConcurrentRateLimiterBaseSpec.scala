@@ -134,7 +134,7 @@ trait ConcurrentRateLimiterBaseSpec[F[_]]
       a2 shouldBe true
       a3 shouldBe true
       p1 shouldBe 0L
-      r1 shouldBe true
+      r1 shouldBe false // all slots were automatically released
       p2 shouldBe 3L
     }
   }

@@ -260,7 +260,7 @@ object LuaScript {
       |  end
       |end
       |
-      |return math.max(0, maxTokens - current);
+      |return math.max(0, maxTokens - current)
       |""".stripMargin
 
   /**
@@ -270,13 +270,13 @@ object LuaScript {
    */
   val concurrentRateLimiterAcquire: String =
     """
-      |local instant = tonumber(ARGV[1]);
-      |local maxSlots = tonumber(ARGV[2]);
-      |local ttl = tonumber(ARGV[3]);
+      |local instant = tonumber(ARGV[1])
+      |local maxSlots = tonumber(ARGV[2])
+      |local ttl = tonumber(ARGV[3])
       |
       |local expiredSlots = instant - ttl
       |-- remove expired records (-inf, timestamp)
-      |redis.call('ZREMRANGEBYSCORE', KEYS[1], -inf, (expiredSlots)
+      |redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', expiredSlots)
       |
       |local current = redis.call('ZCARD', KEYS[1])
       |
@@ -295,15 +295,20 @@ object LuaScript {
    */
   val concurrentRateLimiterRelease: String =
     """
-      |local instant = tonumber(ARGV[1]);
-      |local ttl = tonumber(ARGV[2]);
+      |local instant = tonumber(ARGV[1])
+      |local ttl = tonumber(ARGV[2])
       |
       |local expiredSlots = instant - ttl
       |-- remove expired records (-inf, timestamp)
-      |redis.call('ZREMRANGEBYSCORE', KEYS[1], -inf, (expiredSlots)
+      |redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', expiredSlots)
       |local removed = redis.call('ZPOPMIN', KEYS[1])
+      |local removed = removed and #removed or 0
       |
-      |return removed and 1 or 0
+      |if removed > 0 then
+      |  return 1
+      |else
+      |  return 0
+      |end
       |""".stripMargin
 
   /**
@@ -313,13 +318,13 @@ object LuaScript {
    */
   val concurrentRateLimiterPermissions: String =
     """
-      |local instant = tonumber(ARGV[1]);
-      |local maxSlots = tonumber(ARGV[2]);
-      |local ttl = tonumber(ARGV[3]);
+      |local instant = tonumber(ARGV[1])
+      |local maxSlots = tonumber(ARGV[2])
+      |local ttl = tonumber(ARGV[3])
       |
       |local expiredSlots = instant - ttl
       |-- remove expired records (-inf, timestamp)
-      |redis.call('ZREMRANGEBYSCORE', KEYS[1], -inf, (expiredSlots)
+      |redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', expiredSlots)
       |
       |return math.max(0, maxSlots - redis.call('ZCARD', KEYS[1]))
       |""".stripMargin
