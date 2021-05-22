@@ -68,6 +68,13 @@ Class | Effect |
 `JedisSyncConcurrentRateLimiter` | None (`Identity`)  
 `JedisCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
 `JedisZioConcurrentRateLimiter` | `zio.Task` 
+`LettuceSyncConcurrentRateLimiter` | None (`Identity`)  
+`LettuceAsyncConcurrentRateLimiter` | `scala.concurrent.Future` 
+`LettuceCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`LettuceCatsAsyncConcurrentRateLimiter` | `F[_]: cats.effect.Concurrent` 
+`LettuceMonixAsyncConcurrentRateLimiter` | `monix.eval.Task` 
+`LettuceZioConcurrentRateLimiter` | `zio.Task` 
+`LettuceZioAsyncConcurrentRateLimiter` | `zio.Task` 
 
 ## Usage
 ```scala
