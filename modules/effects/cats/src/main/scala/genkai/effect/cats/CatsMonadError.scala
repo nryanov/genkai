@@ -45,5 +45,5 @@ final class CatsMonadError[F[_]: ContextShift](blocker: Blocker)(implicit F: Syn
 
   override def flatten[A](fa: F[F[A]]): F[A] = F.flatten(fa)
 
-  override def guarantee[A](f: F[A])(g: => F[Unit]): F[A] = F.guarantee(f)(g)
+  override def guarantee[A](f: => F[A])(g: => F[Unit]): F[A] = F.guarantee(f)(g)
 }

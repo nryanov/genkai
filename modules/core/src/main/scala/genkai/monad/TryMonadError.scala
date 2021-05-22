@@ -49,7 +49,7 @@ object TryMonadError extends MonadError[Try] {
 
   override def eval[A](f: => A): Try[A] = Try(f)
 
-  override def guarantee[A](f: Try[A])(g: => Try[Unit]): Try[A] =
+  override def guarantee[A](f: => Try[A])(g: => Try[Unit]): Try[A] =
     f match {
       case Failure(exception) => suspend(g).flatMap(_ => Failure(exception))
       case Success(value)     => suspend(g).map(_ => value)

@@ -73,7 +73,7 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
     p.future
   }
 
-  override def guarantee[A](f: Future[A])(g: => Future[Unit]): Future[A] = {
+  override def guarantee[A](f: => Future[A])(g: => Future[Unit]): Future[A] = {
     val p = Promise[A]()
 
     def tryF = Try(g) match {

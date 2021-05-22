@@ -43,7 +43,7 @@ object IdMonadError extends MonadError[Identity] {
 
   override def eval[A](f: => A): Identity[A] = f
 
-  override def guarantee[A](f: Identity[A])(g: => Identity[Unit]): Identity[A] =
+  override def guarantee[A](f: => Identity[A])(g: => Identity[Unit]): Identity[A] =
     try f
     finally g
 }

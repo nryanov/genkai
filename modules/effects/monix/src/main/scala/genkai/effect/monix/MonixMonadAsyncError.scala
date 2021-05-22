@@ -60,7 +60,7 @@ final class MonixMonadAsyncError extends MonadAsyncError[Task] {
 
   override def eval[A](f: => A): Task[A] = Task.eval(f)
 
-  override def guarantee[A](f: Task[A])(g: => Task[Unit]): Task[A] = f.guarantee(g)
+  override def guarantee[A](f: => Task[A])(g: => Task[Unit]): Task[A] = f.guarantee(g)
 
   override def unit: Task[Unit] = Task.unit
 

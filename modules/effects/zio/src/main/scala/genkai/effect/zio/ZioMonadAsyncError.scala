@@ -66,6 +66,6 @@ final class ZioMonadAsyncError extends MonadAsyncError[Task] {
 
   override def flatten[A](fa: Task[Task[A]]): Task[A] = Task.flatten(fa)
 
-  override def guarantee[A](f: Task[A])(g: => Task[Unit]): Task[A] =
+  override def guarantee[A](f: => Task[A])(g: => Task[Unit]): Task[A] =
     f.ensuring(g.ignore)
 }
