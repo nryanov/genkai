@@ -75,6 +75,13 @@ Class | Effect |
 `LettuceMonixAsyncConcurrentRateLimiter` | `monix.eval.Task` 
 `LettuceZioConcurrentRateLimiter` | `zio.Task` 
 `LettuceZioAsyncConcurrentRateLimiter` | `zio.Task` 
+`RedissonSyncConcurrentRateLimiter` | None (`Identity`)  
+`RedissonAsyncConcurrentRateLimiter` | `scala.concurrent.Future` 
+`RedissonCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`RedissonCatsAsyncConcurrentRateLimiter` | `F[_]: cats.effect.Concurrent` 
+`RedissonMonixAsyncConcurrentRateLimiter` | `monix.eval.Task` 
+`RedissonZioConcurrentRateLimiter` | `zio.Task` 
+`RedissonZioAsyncConcurrentRateLimiter` | `zio.Task`   
 
 ## Usage
 ```scala
