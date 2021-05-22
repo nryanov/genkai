@@ -1,13 +1,19 @@
 package genkai.redis.jedis
 
 import genkai.redis.{RedisConcurrentRateLimiterSpecForAll, RedisContainer}
-import redis.clients.jedis.JedisPool
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig
+import redis.clients.jedis.{Jedis, JedisPool}
 
 trait JedisConcurrentRateLimiterSpec[F[_]] extends RedisConcurrentRateLimiterSpecForAll[F] {
   var jedisPool: JedisPool = _
 
-  override def afterContainersStart(redis: RedisContainer): Unit =
-    jedisPool = new JedisPool(redis.containerIpAddress, redis.mappedPort(6379))
+  override def afterContainersStart(redis: RedisContainer): Unit = {
+    val poolConfig = new GenericObjectPoolConfig[Jedis]()
+    poolConfig.setMinIdle(1)
+    poolConfig.setMaxIdle(2)
+    poolConfig.setMaxTotal(2)
+    jedisPool = new JedisPool(poolConfig, redis.containerIpAddress, redis.mappedPort(6379))
+  }
 
   override protected def afterAll(): Unit = {
     jedisPool.close()

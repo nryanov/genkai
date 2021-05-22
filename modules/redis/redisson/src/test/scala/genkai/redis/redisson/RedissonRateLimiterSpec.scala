@@ -13,6 +13,8 @@ trait RedissonRateLimiterSpec[F[_]] extends RedisRateLimiterSpecForAll[F] {
     config
       .useSingleServer()
       .setTimeout(1000000)
+      .setConnectionMinimumIdleSize(1)
+      .setConnectionPoolSize(2)
       .setAddress(s"redis://${redis.containerIpAddress}:${redis.mappedPort(6379)}")
 
     redisClient = Redisson.create(config)
