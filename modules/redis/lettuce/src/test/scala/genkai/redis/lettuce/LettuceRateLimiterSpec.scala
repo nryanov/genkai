@@ -9,7 +9,7 @@ trait LettuceRateLimiterSpec[F[_]] extends RedisRateLimiterSpecForAll[F] {
 
   override def afterContainersStart(redis: RedisContainer): Unit = {
     val clientResources =
-      new DefaultClientResources.Builder().ioThreadPoolSize(2).computationThreadPoolSize(2).build()
+      DefaultClientResources.builder().ioThreadPoolSize(2).computationThreadPoolSize(2).build()
     redisClient = RedisClient.create(
       clientResources,
       s"redis://${redis.containerIpAddress}:${redis.mappedPort(6379)}"
