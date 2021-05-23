@@ -53,7 +53,7 @@ object LettuceZioConcurrentRateLimiter {
     closeClient = false,
     acquireSha = sha._1,
     releaseSha = sha._2,
-    permissionsSha = sha._2,
+    permissionsSha = sha._3,
     monad = monad
   )
 
