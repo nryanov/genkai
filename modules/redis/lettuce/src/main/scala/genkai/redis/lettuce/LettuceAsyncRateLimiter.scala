@@ -84,7 +84,7 @@ abstract class LettuceAsyncRateLimiter[F[_]](
   }
 
   override def close(): F[Unit] =
-    monad.ifA(monad.pure(closeClient))(
+    monad.ifM(monad.pure(closeClient))(
       monad.cancelable[Unit] { cb =>
         val cf = connection.closeAsync().thenCompose(_ => client.shutdownAsync()).whenComplete {
           (_: Void, err: Throwable) =>

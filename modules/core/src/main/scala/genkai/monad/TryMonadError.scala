@@ -35,7 +35,7 @@ object TryMonadError extends MonadError[Try] {
       case _                                               => fa
     }
 
-  override def ifA[A](fcond: Try[Boolean])(ifTrue: => Try[A], ifFalse: => Try[A]): Try[A] =
+  override def ifM[A](fcond: Try[Boolean])(ifTrue: => Try[A], ifFalse: => Try[A]): Try[A] =
     fcond.flatMap { flag =>
       if (flag) ifTrue
       else ifFalse

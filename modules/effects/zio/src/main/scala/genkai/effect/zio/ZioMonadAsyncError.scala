@@ -50,7 +50,7 @@ final class ZioMonadAsyncError extends MonadAsyncError[Task] {
   override def handleErrorWith[A](fa: Task[A])(pf: PartialFunction[Throwable, Task[A]]): Task[A] =
     fa.catchSome(pf)
 
-  override def ifA[A](fcond: Task[Boolean])(ifTrue: => Task[A], ifFalse: => Task[A]): Task[A] =
+  override def ifM[A](fcond: Task[Boolean])(ifTrue: => Task[A], ifFalse: => Task[A]): Task[A] =
     Task.ifM(fcond)(ifTrue, ifFalse)
 
   override def whenA[A](cond: Boolean)(f: => Task[A]): Task[Unit] =

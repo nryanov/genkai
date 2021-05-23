@@ -89,7 +89,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
         .map(tokens => strategy.isAllowed(tokens))
   }
 
-  override def close(): F[Unit] = monad.ifA(monad.pure(closeClient))(
+  override def close(): F[Unit] = monad.ifM(monad.pure(closeClient))(
     monad.eval(client.shutdown()),
     monad.unit
   )

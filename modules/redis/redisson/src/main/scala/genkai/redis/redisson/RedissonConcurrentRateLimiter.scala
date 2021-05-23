@@ -50,8 +50,8 @@ abstract class RedissonConcurrentRateLimiter[F[_]](
   override private[genkai] def use[A: Key, B](key: A, instant: Instant)(
     f: => F[B]
   ): F[Either[ConcurrentLimitExhausted[A], B]] =
-    monad.ifA(acquire(key, instant))(
-      ifTrue = monad.guarantee(f)(release(key).void).map(r => Right(r)),
+    monad.ifM(acquire(key, instant))(
+      ifTrue = monad.guarantee(f)(release(key, instant).void).map(r => Right(r)),
       ifFalse = monad.pure(Left(ConcurrentLimitExhausted(key)))
     )
 
@@ -88,7 +88,7 @@ abstract class RedissonConcurrentRateLimiter[F[_]](
   }
 
   override def close(): F[Unit] =
-    monad.ifA(monad.pure(closeClient))(
+    monad.ifM(monad.pure(closeClient))(
       monad.eval(client.shutdown()),
       monad.unit
     )

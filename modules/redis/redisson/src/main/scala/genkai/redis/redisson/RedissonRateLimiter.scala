@@ -64,7 +64,7 @@ abstract class RedissonRateLimiter[F[_]](
   }
 
   override def close(): F[Unit] =
-    monad.ifA(monad.pure(closeClient))(
+    monad.ifM(monad.pure(closeClient))(
       monad.eval(client.shutdown()),
       monad.unit
     )

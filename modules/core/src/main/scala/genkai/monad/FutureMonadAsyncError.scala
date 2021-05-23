@@ -34,7 +34,7 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
   ): Future[A] =
     fa.recoverWith(pf)
 
-  override def ifA[A](
+  override def ifM[A](
     fcond: Future[Boolean]
   )(ifTrue: => Future[A], ifFalse: => Future[A]): Future[A] =
     fcond.flatMap { flag =>

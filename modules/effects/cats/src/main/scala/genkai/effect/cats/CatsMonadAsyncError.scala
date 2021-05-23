@@ -34,8 +34,8 @@ final class CatsMonadAsyncError[F[_]](implicit F: Concurrent[F]) extends MonadAs
   override def handleErrorWith[A](fa: F[A])(pf: PartialFunction[Throwable, F[A]]): F[A] =
     F.handleErrorWith(fa)(pf)
 
-  override def ifA[A](fcond: F[Boolean])(ifTrue: => F[A], ifFalse: => F[A]): F[A] =
-    F.ifA(fcond)(ifTrue, ifFalse)
+  override def ifM[A](fcond: F[Boolean])(ifTrue: => F[A], ifFalse: => F[A]): F[A] =
+    F.ifM(fcond)(ifTrue, ifFalse)
 
   override def whenA[A](cond: Boolean)(f: => F[A]): F[Unit] =
     F.whenA(cond)(f)

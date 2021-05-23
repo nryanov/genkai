@@ -62,8 +62,8 @@ abstract class LettuceAsyncConcurrentRateLimiter[F[_]](
 
   override private[genkai] def use[A: Key, B](key: A, instant: Instant)(
     f: => F[B]
-  ): F[Either[ConcurrentLimitExhausted[A], B]] = monad.ifA(acquire(key, instant))(
-    ifTrue = monad.guarantee(f)(release(key).void).map(r => Right(r)),
+  ): F[Either[ConcurrentLimitExhausted[A], B]] = monad.ifM(acquire(key, instant))(
+    ifTrue = monad.guarantee(f)(release(key, instant).void).map(r => Right(r)),
     ifFalse = monad.pure(Left(ConcurrentLimitExhausted(key)))
   )
 
@@ -116,7 +116,7 @@ abstract class LettuceAsyncConcurrentRateLimiter[F[_]](
   }
 
   override def close(): F[Unit] =
-    monad.ifA(monad.pure(closeClient))(
+    monad.ifM(monad.pure(closeClient))(
       monad.cancelable[Unit] { cb =>
         val cf = connection.closeAsync().thenCompose(_ => client.shutdownAsync()).whenComplete {
           (_: Void, err: Throwable) =>

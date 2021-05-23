@@ -23,7 +23,7 @@ trait MonadError[F[_]] {
 
   def handleErrorWith[A](fa: F[A])(pf: PartialFunction[Throwable, F[A]]): F[A]
 
-  def ifA[A](fcond: F[Boolean])(ifTrue: => F[A], ifFalse: => F[A]): F[A]
+  def ifM[A](fcond: F[Boolean])(ifTrue: => F[A], ifFalse: => F[A]): F[A]
 
   def whenA[A](cond: Boolean)(f: => F[A]): F[Unit]
 
