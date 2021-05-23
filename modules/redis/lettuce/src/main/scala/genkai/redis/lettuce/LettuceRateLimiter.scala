@@ -63,11 +63,11 @@ abstract class LettuceRateLimiter[F[_]](
   }
 
   override def close(): F[Unit] =
-    monad.ifA(monad.pure(closeClient))(
+    monad.ifM(monad.pure(closeClient))(
       monad.eval(connection.close()) *>
         monad.eval(client.shutdown()),
       monad.eval(connection.close())
     )
 
-  override protected def monadError: MonadError[F] = monad
+  override def monadError: MonadError[F] = monad
 }

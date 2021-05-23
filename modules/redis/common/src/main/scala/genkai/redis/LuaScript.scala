@@ -10,7 +10,7 @@ Scripts will be loaded only once per RateLimiter instance and then executed as a
 object LuaScript {
 
   /**
-   * args: key, current_timestamp, cost, maxTokens, refillAmount, refillTime
+   * args: key, current_timestamp (epoch seconds), cost, maxTokens, refillAmount, refillTime (seconds)
    * key format: token_bucket:<key>
    * hash structure: f1: value, f2: lastRefillTime
    * @return - 1 if token acquired, 0 - otherwise
@@ -48,7 +48,7 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * args: key, current_timestamp, maxTokens, refillAmount, refillTime
+   * args: key, current_timestamp (epoch seconds), maxTokens, refillAmount, refillTime (seconds)
    * key format: token_bucket:<key>
    * hash structure: f1: value, f2: lastRefillTime
    * @return - unused tokens
@@ -80,7 +80,7 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * args: key, windowStartTs, cost, maxTokens, ttl (windowSize)
+   * args: key, windowStartTs (epoch seconds), cost, maxTokens, ttl (windowSize, seconds)
    * key format: fixed_window:<key>:<timestamp> where <timestamp> is truncated to the beginning of the window
    * @return - 1 if token acquired, 0 - otherwise
    */
@@ -122,7 +122,7 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * args: key, windowStartTs, maxTokens, ttl
+   * args: key, windowStartTs (epoch seconds), maxTokens, ttl (seconds)
    * key format: fixed_window:<key>:<timestamp> where <timestamp> is truncated to the beginning of the window
    * @return - permissions
    */
@@ -156,7 +156,7 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * input: key, instant, cost, maxTokens, windowSize, precision, ttl
+   * input: key, instant (epoch seconds), cost, maxTokens, windowSize (seconds), precision, ttl (seconds)
    * key format: sliding_window:<key>
    * @return - 1 if token acquired, 0 - otherwise
    */
@@ -219,7 +219,7 @@ object LuaScript {
       |""".stripMargin
 
   /**
-   * input: key, instant, maxTokens, windowSize, precision
+   * input: key, instant (epoch seconds), maxTokens, windowSize (seconds), precision
    * key format: sliding_window:<key>
    * @return - permissions
    */
@@ -260,6 +260,72 @@ object LuaScript {
       |  end
       |end
       |
-      |return math.max(0, maxTokens - current);
+      |return math.max(0, maxTokens - current)
+      |""".stripMargin
+
+  /**
+   * input: key, instant (epoch millis), maxSlots, ttl (millis)
+   * key format: concurrent_limiter:<key>
+   * @return - 0 if no slot was acquired, 1 otherwise.
+   */
+  val concurrentRateLimiterAcquire: String =
+    """
+      |local instant = tonumber(ARGV[1])
+      |local maxSlots = tonumber(ARGV[2])
+      |local ttl = tonumber(ARGV[3])
+      |
+      |local expiredSlots = instant - ttl
+      |-- remove expired records (-inf, timestamp)
+      |redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', expiredSlots)
+      |
+      |local current = redis.call('ZCARD', KEYS[1])
+      |
+      |if current + 1 <= maxSlots then
+      |  redis.call('ZADD', KEYS[1], instant, instant)
+      |  return 1
+      |else
+      |  return 0
+      |end
+      |""".stripMargin
+
+  /**
+   * input: key, instant (epoch millis), ttl (millis)
+   * key format: concurrent_limiter:<key>
+   * @return - 0 if no slot was released, 1 otherwise.
+   */
+  val concurrentRateLimiterRelease: String =
+    """
+      |local instant = tonumber(ARGV[1])
+      |local ttl = tonumber(ARGV[2])
+      |
+      |local expiredSlots = instant - ttl
+      |-- remove expired records (-inf, timestamp)
+      |redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', expiredSlots)
+      |local removed = redis.call('ZPOPMIN', KEYS[1])
+      |local removed = removed and #removed or 0
+      |
+      |if removed > 0 then
+      |  return 1
+      |else
+      |  return 0
+      |end
+      |""".stripMargin
+
+  /**
+   * input: key, instant (epoch millis), maxSlots, ttl (millis)
+   * key format: concurrent_limiter:<key>
+   * @return - permissions
+   */
+  val concurrentRateLimiterPermissions: String =
+    """
+      |local instant = tonumber(ARGV[1])
+      |local maxSlots = tonumber(ARGV[2])
+      |local ttl = tonumber(ARGV[3])
+      |
+      |local expiredSlots = instant - ttl
+      |-- remove expired records (-inf, timestamp)
+      |redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', expiredSlots)
+      |
+      |return math.max(0, maxSlots - redis.call('ZCARD', KEYS[1]))
       |""".stripMargin
 }

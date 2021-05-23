@@ -2,7 +2,7 @@ package genkai
 
 import org.slf4j.{Logger, LoggerFactory}
 
-trait Logging[F[_]] { self: RateLimiter[F] =>
+trait Logging[F[_]] { self: MonadErrorAware[F] =>
   protected val logger: Logger = LoggerFactory.getLogger(self.getClass)
 
   def trace(msg: String): F[Unit] =

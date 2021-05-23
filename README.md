@@ -32,6 +32,8 @@ Backend | Client |
 Aerospike | [aerospike-client-java](https://github.com/aerospike/aerospike-client-java) 
 Redis | [jedis](https://github.com/redis/jedis) <br> [lettuce](https://github.com/lettuce-io/lettuce-core) <br> [redisson](https://github.com/redisson/redisson)
 
+**RateLimiter**
+
 Class | Effect | 
 ------------ | ------------- 
 `TryRateLimiter` | `scala.util.Try`
@@ -56,6 +58,30 @@ Class | Effect |
 `RedissonMonixAsyncRateLimiter` | `monix.eval.Task` 
 `RedissonZioRateLimiter` | `zio.Task` 
 `RedissonZioAsyncRateLimiter` | `zio.Task`   
+
+**ConcurrentRateLimiter**
+
+Class | Effect | 
+------------ | ------------- 
+`TryConcurrentRateLimiter` | `scala.util.Try`
+`EitherConcurrentRateLimiter` | `Either` 
+`JedisSyncConcurrentRateLimiter` | None (`Identity`)  
+`JedisCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`JedisZioConcurrentRateLimiter` | `zio.Task` 
+`LettuceSyncConcurrentRateLimiter` | None (`Identity`)  
+`LettuceAsyncConcurrentRateLimiter` | `scala.concurrent.Future` 
+`LettuceCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`LettuceCatsAsyncConcurrentRateLimiter` | `F[_]: cats.effect.Concurrent` 
+`LettuceMonixAsyncConcurrentRateLimiter` | `monix.eval.Task` 
+`LettuceZioConcurrentRateLimiter` | `zio.Task` 
+`LettuceZioAsyncConcurrentRateLimiter` | `zio.Task` 
+`RedissonSyncConcurrentRateLimiter` | None (`Identity`)  
+`RedissonAsyncConcurrentRateLimiter` | `scala.concurrent.Future` 
+`RedissonCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`RedissonCatsAsyncConcurrentRateLimiter` | `F[_]: cats.effect.Concurrent` 
+`RedissonMonixAsyncConcurrentRateLimiter` | `monix.eval.Task` 
+`RedissonZioConcurrentRateLimiter` | `zio.Task` 
+`RedissonZioAsyncConcurrentRateLimiter` | `zio.Task`   
 
 ## Usage
 ```scala

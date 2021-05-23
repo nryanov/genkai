@@ -2,12 +2,10 @@ package genkai
 
 import java.time.Instant
 
-import genkai.monad.MonadError
-
 /**
  * @tparam F - effect type
  */
-trait RateLimiter[F[_]] {
+trait RateLimiter[F[_]] extends MonadErrorAware[F] {
 
   /**
    * @param key - ~ object id
@@ -76,6 +74,4 @@ trait RateLimiter[F[_]] {
    * @return - unit if successfully closed or error wrapped in effect
    */
   def close(): F[Unit]
-
-  protected def monadError: MonadError[F]
 }

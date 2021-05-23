@@ -2,9 +2,9 @@ package genkai.aerospike
 
 import com.aerospike.client.AerospikeClient
 import com.dimafeng.testcontainers.scalatest.TestContainerForAll
-import genkai.BaseSpec
+import genkai.RateLimiterBaseSpec
 
-trait AerospikeSpecForAll[F[_]] extends BaseSpec[F] with TestContainerForAll {
+trait AerospikeSpecForAll[F[_]] extends RateLimiterBaseSpec[F] with TestContainerForAll {
   override val containerDef: AerospikeContainer.Def = AerospikeContainer.Def()
 
   var aerospikeClient: AerospikeClient = _

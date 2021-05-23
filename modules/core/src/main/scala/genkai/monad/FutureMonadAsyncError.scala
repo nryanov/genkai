@@ -34,7 +34,7 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
   ): Future[A] =
     fa.recoverWith(pf)
 
-  override def ifA[A](
+  override def ifM[A](
     fcond: Future[Boolean]
   )(ifTrue: => Future[A], ifFalse: => Future[A]): Future[A] =
     fcond.flatMap { flag =>
@@ -73,7 +73,7 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
     p.future
   }
 
-  override def guarantee[A](f: Future[A])(g: => Future[Unit]): Future[A] = {
+  override def guarantee[A](f: => Future[A])(g: => Future[Unit]): Future[A] = {
     val p = Promise[A]()
 
     def tryF = Try(g) match {
