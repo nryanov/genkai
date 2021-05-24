@@ -4,7 +4,7 @@ import genkai.{Identity, RateLimiter, Strategy}
 
 import scala.concurrent.Future
 
-class JedisSyncRateLimiterSpec extends JedisSpec[Identity] {
+class JedisSyncRateLimiterSpec extends JedisRateLimiterSpec[Identity] {
   override def rateLimiter(strategy: Strategy): RateLimiter[Identity] =
     JedisSyncRateLimiter(jedisPool, strategy)
 

@@ -64,12 +64,12 @@ abstract class RedissonRateLimiter[F[_]](
   }
 
   override def close(): F[Unit] =
-    monad.ifA(monad.pure(closeClient))(
+    monad.ifM(monad.pure(closeClient))(
       monad.eval(client.shutdown()),
       monad.unit
     )
 
-  override protected def monadError: MonadError[F] = monad
+  override def monadError: MonadError[F] = monad
 
   private def evalSha(sha: String, keys: java.util.List[Object], args: Seq[String]): Long =
     scriptCommand.evalSha[Long](

@@ -4,7 +4,7 @@ import genkai.{RateLimiter, Strategy}
 
 import scala.concurrent.Future
 
-class RedissonFutureRateLimiterSpec extends RedissonSpec[Future] {
+class RedissonFutureRateLimiterSpec extends RedissonRateLimiterSpec[Future] {
   override def rateLimiter(strategy: Strategy): RateLimiter[Future] =
     RedissonFutureRateLimiter(redisClient, strategy)
 

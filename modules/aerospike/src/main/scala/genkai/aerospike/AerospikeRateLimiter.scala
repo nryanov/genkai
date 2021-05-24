@@ -57,5 +57,5 @@ abstract class AerospikeRateLimiter[F[_]](
 
   override def close(): F[Unit] = monad.whenA(closeClient)(monad.eval(client.close()))
 
-  override protected def monadError: MonadError[F] = monad
+  override def monadError: MonadError[F] = monad
 }

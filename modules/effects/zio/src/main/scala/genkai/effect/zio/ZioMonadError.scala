@@ -33,7 +33,7 @@ final class ZioMonadError(blocking: Blocking.Service) extends MonadError[Task] {
   override def handleErrorWith[A](fa: Task[A])(pf: PartialFunction[Throwable, Task[A]]): Task[A] =
     fa.catchSome(pf)
 
-  override def ifA[A](fcond: Task[Boolean])(ifTrue: => Task[A], ifFalse: => Task[A]): Task[A] =
+  override def ifM[A](fcond: Task[Boolean])(ifTrue: => Task[A], ifFalse: => Task[A]): Task[A] =
     Task.ifM(fcond)(ifTrue, ifFalse)
 
   override def whenA[A](cond: Boolean)(f: => Task[A]): Task[Unit] =
@@ -50,6 +50,6 @@ final class ZioMonadError(blocking: Blocking.Service) extends MonadError[Task] {
 
   override def flatten[A](fa: Task[Task[A]]): Task[A] = Task.flatten(fa)
 
-  override def guarantee[A](f: Task[A])(g: => Task[Unit]): Task[A] =
+  override def guarantee[A](f: => Task[A])(g: => Task[Unit]): Task[A] =
     f.ensuring(g.ignore)
 }

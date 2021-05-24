@@ -23,5 +23,5 @@ final class EitherRateLimiter(rateLimiter: RateLimiter[Identity])
 
   override def close(): Either[Throwable, Unit] = monadError.eval(rateLimiter.close())
 
-  override protected def monadError: MonadError[Either[Throwable, *]] = EitherMonadError
+  override def monadError: MonadError[Either[Throwable, *]] = EitherMonadError
 }
