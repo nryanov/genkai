@@ -2,12 +2,12 @@ package genkai.redis.redisson.zio
 
 import genkai.{RateLimiter, Strategy}
 import genkai.effect.zio.ZioBaseSpec
-import genkai.redis.redisson.RedissonSpec
+import genkai.redis.redisson.RedissonRateLimiterSpec
 import zio._
 
 import scala.concurrent.Future
 
-class RedissonZioAsyncRateLimiterSpec extends RedissonSpec[Task] with ZioBaseSpec {
+class RedissonZioAsyncRateLimiterSpec extends RedissonRateLimiterSpec[Task] with ZioBaseSpec {
   override def rateLimiter(strategy: Strategy): RateLimiter[Task] =
     runtime.unsafeRun(RedissonZioAsyncRateLimiter.useClient(redisClient, strategy))
 

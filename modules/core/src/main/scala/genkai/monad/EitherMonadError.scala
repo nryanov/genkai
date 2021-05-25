@@ -49,7 +49,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
       case _                                    => fa
     }
 
-  override def ifA[A](
+  override def ifM[A](
     fcond: Either[Throwable, Boolean]
   )(ifTrue: => Either[Throwable, A], ifFalse: => Either[Throwable, A]): Either[Throwable, A] =
     fcond.flatMap { flag =>
@@ -66,7 +66,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
   override def eval[A](f: => A): Either[Throwable, A] = Try(f).toEither
 
   override def guarantee[A](
-    f: Either[Throwable, A]
+    f: => Either[Throwable, A]
   )(g: => Either[Throwable, Unit]): Either[Throwable, A] = {
     def tryE = Try(g) match {
       case Failure(exception) => Left(exception)

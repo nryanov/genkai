@@ -3,11 +3,11 @@ lazy val kindProjectorVersion = "0.13.0"
 lazy val lettuceVersion = "6.1.2.RELEASE"
 lazy val jedisVersion = "3.6.0"
 lazy val redissonVersion = "3.15.5"
-lazy val aerospikeClientVersion = "5.1.0"
+lazy val aerospikeClientVersion = "5.1.2"
 // effects
 lazy val catsVersion = "2.5.1"
-lazy val zioVersion = "1.0.8"
-lazy val monixVersion = "3.3.0"
+lazy val zioVersion = "1.0.7"
+lazy val monixVersion = "3.4.0"
 // logging
 lazy val slf4jApiVersion = "1.7.30"
 // test

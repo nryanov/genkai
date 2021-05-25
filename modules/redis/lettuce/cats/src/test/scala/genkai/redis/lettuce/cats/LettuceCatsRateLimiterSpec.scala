@@ -3,11 +3,11 @@ package genkai.redis.lettuce.cats
 import cats.effect.IO
 import genkai.effect.cats.CatsBaseSpec
 import genkai.{RateLimiter, Strategy}
-import genkai.redis.lettuce.LettuceSpec
+import genkai.redis.lettuce.LettuceRateLimiterSpec
 
 import scala.concurrent.Future
 
-class LettuceCatsRateLimiterSpec extends LettuceSpec[IO] with CatsBaseSpec {
+class LettuceCatsRateLimiterSpec extends LettuceRateLimiterSpec[IO] with CatsBaseSpec {
   override def rateLimiter(strategy: Strategy): RateLimiter[IO] =
     LettuceCatsRateLimiter.useClient[IO](redisClient, strategy, blocker).unsafeRunSync()
 

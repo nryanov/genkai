@@ -50,7 +50,7 @@ abstract class JedisRateLimiter[F[_]](
   override def close(): F[Unit] =
     monad.whenA(closeClient)(monad.eval(pool.close()))
 
-  override protected def monadError: MonadError[F] = monad
+  override def monadError: MonadError[F] = monad
 
   private def useClient[A](fa: Jedis => F[A]): F[A] =
     monad.eval(pool.getResource).flatMap { client =>

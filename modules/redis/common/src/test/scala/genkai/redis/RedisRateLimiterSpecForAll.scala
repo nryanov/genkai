@@ -1,8 +1,8 @@
 package genkai.redis
 
 import com.dimafeng.testcontainers.scalatest.TestContainerForAll
-import genkai.BaseSpec
+import genkai.RateLimiterBaseSpec
 
-trait RedisSpecForAll[F[_]] extends BaseSpec[F] with TestContainerForAll {
+trait RedisRateLimiterSpecForAll[F[_]] extends RateLimiterBaseSpec[F] with TestContainerForAll {
   override val containerDef: RedisContainer.Def = RedisContainer.Def()
 }

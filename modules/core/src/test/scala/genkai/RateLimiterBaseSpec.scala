@@ -10,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-trait BaseSpec[F[_]]
+trait RateLimiterBaseSpec[F[_]]
     extends AsyncFunSuite
     with Matchers
     with BeforeAndAfterAll
