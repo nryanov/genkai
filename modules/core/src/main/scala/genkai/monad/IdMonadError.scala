@@ -19,15 +19,34 @@ object IdMonadError extends MonadError[Identity] {
 
   override def adaptError[A](fa: Identity[A])(
     pf: PartialFunction[Throwable, Throwable]
-  ): Identity[A] = fa
+  ): Identity[A] =
+    try fa
+    catch {
+      case e: Throwable if pf.isDefinedAt(e) => raiseError(pf(e))
+      case e: Throwable                      => raiseError(e)
+    }
 
-  override def mapError[A](fa: Identity[A])(f: Throwable => Throwable): Identity[A] = fa
+  override def mapError[A](fa: Identity[A])(f: Throwable => Throwable): Identity[A] =
+    try fa
+    catch {
+      case e: Throwable => raiseError(f(e))
+    }
 
-  override def handleError[A](fa: Identity[A])(pf: PartialFunction[Throwable, A]): Identity[A] = fa
+  override def handleError[A](fa: Identity[A])(pf: PartialFunction[Throwable, A]): Identity[A] =
+    try fa
+    catch {
+      case e: Throwable if pf.isDefinedAt(e) => pf(e)
+      case e: Throwable                      => raiseError(pure(e))
+    }
 
   override def handleErrorWith[A](fa: Identity[A])(
     pf: PartialFunction[Throwable, Identity[A]]
-  ): Identity[A] = fa
+  ): Identity[A] =
+    try fa
+    catch {
+      case e: Throwable if pf.isDefinedAt(e) => pf(e)
+      case e: Throwable                      => raiseError(pure(e))
+    }
 
   override def ifM[A](
     fcond: Identity[Boolean]
