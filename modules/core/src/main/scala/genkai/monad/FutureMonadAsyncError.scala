@@ -15,21 +15,24 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
 
   override def raiseError[A](error: Throwable): Future[A] = Future.failed(error)
 
-  override def adaptError[A](fa: Future[A])(pf: PartialFunction[Throwable, Throwable]): Future[A] =
+  override def adaptError[A](
+    fa: => Future[A]
+  )(pf: PartialFunction[Throwable, Throwable]): Future[A] =
     fa.transformWith {
       case Failure(exception) if pf.isDefinedAt(exception) => raiseError(pf(exception))
       case _                                               => fa
     }
 
-  override def mapError[A](fa: Future[A])(f: Throwable => Throwable): Future[A] = fa.transformWith {
-    case Failure(exception) => raiseError(f(exception))
-    case _                  => fa
-  }
+  override def mapError[A](fa: => Future[A])(f: Throwable => Throwable): Future[A] =
+    fa.transformWith {
+      case Failure(exception) => raiseError(f(exception))
+      case _                  => fa
+    }
 
-  override def handleError[A](fa: Future[A])(pf: PartialFunction[Throwable, A]): Future[A] =
+  override def handleError[A](fa: => Future[A])(pf: PartialFunction[Throwable, A]): Future[A] =
     fa.recover(pf)
 
-  override def handleErrorWith[A](fa: Future[A])(
+  override def handleErrorWith[A](fa: => Future[A])(
     pf: PartialFunction[Throwable, Future[A]]
   ): Future[A] =
     fa.recoverWith(pf)

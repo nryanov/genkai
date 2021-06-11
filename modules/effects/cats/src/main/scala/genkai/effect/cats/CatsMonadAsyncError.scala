@@ -20,18 +20,18 @@ final class CatsMonadAsyncError[F[_]](implicit F: Concurrent[F]) extends MonadAs
 
   override def raiseError[A](error: Throwable): F[A] = F.raiseError(error)
 
-  override def adaptError[A](fa: F[A])(pf: PartialFunction[Throwable, Throwable]): F[A] =
+  override def adaptError[A](fa: => F[A])(pf: PartialFunction[Throwable, Throwable]): F[A] =
     F.adaptError(fa)(pf)
 
-  override def mapError[A](fa: F[A])(f: Throwable => Throwable): F[A] =
+  override def mapError[A](fa: => F[A])(f: Throwable => Throwable): F[A] =
     F.adaptError(fa) { case err: Throwable =>
       f(err)
     }
 
-  override def handleError[A](fa: F[A])(pf: PartialFunction[Throwable, A]): F[A] =
+  override def handleError[A](fa: => F[A])(pf: PartialFunction[Throwable, A]): F[A] =
     F.handleError(fa)(pf)
 
-  override def handleErrorWith[A](fa: F[A])(pf: PartialFunction[Throwable, F[A]]): F[A] =
+  override def handleErrorWith[A](fa: => F[A])(pf: PartialFunction[Throwable, F[A]]): F[A] =
     F.handleErrorWith(fa)(pf)
 
   override def ifM[A](fcond: F[Boolean])(ifTrue: => F[A], ifFalse: => F[A]): F[A] =
