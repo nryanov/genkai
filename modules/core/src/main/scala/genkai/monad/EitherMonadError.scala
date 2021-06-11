@@ -18,7 +18,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
   override def raiseError[A](error: Throwable): Either[Throwable, A] = Left(error)
 
   override def adaptError[A](
-    fa: Either[Throwable, A]
+    fa: => Either[Throwable, A]
   )(pf: PartialFunction[Throwable, Throwable]): Either[Throwable, A] =
     fa match {
       case Left(value) if pf.isDefinedAt(value) => raiseError(pf(value))
@@ -26,7 +26,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
     }
 
   override def mapError[A](
-    fa: Either[Throwable, A]
+    fa: => Either[Throwable, A]
   )(f: Throwable => Throwable): Either[Throwable, A] =
     fa match {
       case Left(value) => raiseError(f(value))
@@ -34,7 +34,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
     }
 
   override def handleError[A](
-    fa: Either[Throwable, A]
+    fa: => Either[Throwable, A]
   )(pf: PartialFunction[Throwable, A]): Either[Throwable, A] =
     fa match {
       case Left(value) if pf.isDefinedAt(value) => eval(pf(value))
@@ -42,7 +42,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
     }
 
   override def handleErrorWith[A](
-    fa: Either[Throwable, A]
+    fa: => Either[Throwable, A]
   )(pf: PartialFunction[Throwable, Either[Throwable, A]]): Either[Throwable, A] =
     fa match {
       case Left(value) if pf.isDefinedAt(value) => suspend(pf(value))

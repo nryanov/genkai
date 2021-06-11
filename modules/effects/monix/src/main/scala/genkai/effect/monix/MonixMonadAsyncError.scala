@@ -32,20 +32,22 @@ final class MonixMonadAsyncError extends MonadAsyncError[Task] {
 
   override def raiseError[A](error: Throwable): Task[A] = Task.raiseError(error)
 
-  override def adaptError[A](fa: Task[A])(pf: PartialFunction[Throwable, Throwable]): Task[A] =
+  override def adaptError[A](fa: => Task[A])(pf: PartialFunction[Throwable, Throwable]): Task[A] =
     fa.onErrorHandleWith {
       case err: Throwable if pf.isDefinedAt(err) => Task.raiseError(pf(err))
       case err                                   => Task.raiseError(err)
 
     }
 
-  override def mapError[A](fa: Task[A])(f: Throwable => Throwable): Task[A] =
+  override def mapError[A](fa: => Task[A])(f: Throwable => Throwable): Task[A] =
     fa.onErrorHandleWith(err => Task.raiseError(f(err)))
 
-  override def handleError[A](fa: Task[A])(pf: PartialFunction[Throwable, A]): Task[A] =
+  override def handleError[A](fa: => Task[A])(pf: PartialFunction[Throwable, A]): Task[A] =
     fa.onErrorRecover(pf)
 
-  override def handleErrorWith[A](fa: Task[A])(pf: PartialFunction[Throwable, Task[A]]): Task[A] =
+  override def handleErrorWith[A](fa: => Task[A])(
+    pf: PartialFunction[Throwable, Task[A]]
+  ): Task[A] =
     fa.onErrorRecoverWith(pf)
 
   override def ifM[A](fcond: Task[Boolean])(ifTrue: => Task[A], ifFalse: => Task[A]): Task[A] =
