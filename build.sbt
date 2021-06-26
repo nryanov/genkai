@@ -9,7 +9,7 @@ lazy val catsVersion = "2.5.1"
 lazy val zioVersion = "1.0.9"
 lazy val monixVersion = "3.4.0"
 // logging
-lazy val slf4jApiVersion = "1.7.30"
+lazy val slf4jApiVersion = "1.7.31"
 // test
 lazy val scalatestVersion = "3.2.9"
 lazy val scalamockVersion = "5.1.0"
