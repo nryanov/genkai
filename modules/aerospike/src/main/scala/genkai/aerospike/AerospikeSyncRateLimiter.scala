@@ -3,7 +3,7 @@ package genkai.aerospike
 import com.aerospike.client.policy.ClientPolicy
 import genkai.monad.syntax._
 import genkai.monad.IdMonadError
-import genkai.{Identity, Strategy}
+import genkai.{Id, Strategy}
 import com.aerospike.client.{AerospikeClient, Language}
 
 import scala.concurrent.duration._
@@ -13,7 +13,7 @@ class AerospikeSyncRateLimiter private (
   namespace: String,
   strategy: AerospikeStrategy,
   closeClient: Boolean
-) extends AerospikeRateLimiter[Identity](client, namespace, IdMonadError, strategy, closeClient)
+) extends AerospikeRateLimiter[Id](client, namespace, IdMonadError, strategy, closeClient)
 
 object AerospikeSyncRateLimiter {
   def apply(

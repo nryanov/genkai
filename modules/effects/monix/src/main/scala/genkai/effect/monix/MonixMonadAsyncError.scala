@@ -69,4 +69,9 @@ final class MonixMonadAsyncError extends MonadAsyncError[Task] {
   override def suspend[A](fa: => Task[A]): Task[A] = Task.suspend(fa)
 
   override def flatten[A](fa: Task[Task[A]]): Task[A] = fa.flatten
+
+  override def bracket[A, B](acquire: => Task[A])(use: A => Task[B])(
+    release: A => Task[Unit]
+  ): Task[B] =
+    acquire.bracket(use)(release)
 }

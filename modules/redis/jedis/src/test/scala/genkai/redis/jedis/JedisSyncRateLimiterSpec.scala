@@ -1,12 +1,12 @@
 package genkai.redis.jedis
 
-import genkai.{Identity, RateLimiter, Strategy}
+import genkai.{Id, RateLimiter, Strategy}
 
 import scala.concurrent.Future
 
-class JedisSyncRateLimiterSpec extends JedisRateLimiterSpec[Identity] {
-  override def rateLimiter(strategy: Strategy): RateLimiter[Identity] =
+class JedisSyncRateLimiterSpec extends JedisRateLimiterSpec[Id] {
+  override def rateLimiter(strategy: Strategy): RateLimiter[Id] =
     JedisSyncRateLimiter(jedisPool, strategy)
 
-  override def toFuture[A](v: Identity[A]): Future[A] = Future.successful(v)
+  override def toFuture[A](v: Id[A]): Future[A] = Future.successful(v)
 }

@@ -54,4 +54,9 @@ final class ZioMonadError(blocking: Blocking.Service) extends MonadError[Task] {
 
   override def guarantee[A](f: => Task[A])(g: => Task[Unit]): Task[A] =
     f.ensuring(g.ignore)
+
+  override def bracket[A, B](acquire: => Task[A])(use: A => Task[B])(
+    release: A => Task[Unit]
+  ): Task[B] =
+    ZIO.bracket(acquire, (a: A) => release(a).orDie, use)
 }

@@ -3,7 +3,7 @@ package genkai
 import java.time.Instant
 import genkai.monad.{EitherMonadError, MonadError}
 
-class EitherConcurrentRateLimiter(concurrentRateLimiter: ConcurrentRateLimiter[Identity])
+class EitherConcurrentRateLimiter(concurrentRateLimiter: ConcurrentRateLimiter[Id])
     extends ConcurrentRateLimiter[Either[Throwable, *]] {
   type ResultRight[A, B] = Either[ConcurrentLimitExhausted[A], B]
   type Result[A, B] = Either[Throwable, ResultRight[A, B]]

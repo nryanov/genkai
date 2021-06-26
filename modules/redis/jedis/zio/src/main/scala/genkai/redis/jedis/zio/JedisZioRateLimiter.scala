@@ -5,11 +5,12 @@ import genkai.Strategy
 import genkai.effect.zio.ZioMonadError
 import genkai.redis.RedisStrategy
 import genkai.redis.jedis.JedisRateLimiter
-import redis.clients.jedis.JedisPool
+import redis.clients.jedis.util.Pool
+import redis.clients.jedis.{Jedis, JedisPool}
 import zio.blocking.{Blocking, blocking}
 
 class JedisZioRateLimiter private (
-  pool: JedisPool,
+  pool: Pool[Jedis],
   strategy: RedisStrategy,
   closeClient: Boolean,
   acquireSha: String,
@@ -19,7 +20,7 @@ class JedisZioRateLimiter private (
 
 object JedisZioRateLimiter {
   def useClient(
-    pool: JedisPool,
+    pool: Pool[Jedis],
     strategy: Strategy
   ): ZIO[Blocking, Throwable, JedisZioRateLimiter] = for {
     blocker <- ZIO.service[Blocking.Service]
@@ -45,7 +46,7 @@ object JedisZioRateLimiter {
   )
 
   def layerUsingClient(
-    pool: JedisPool,
+    pool: Pool[Jedis],
     strategy: Strategy
   ): ZLayer[Blocking, Throwable, Has[JedisZioRateLimiter]] =
     useClient(pool, strategy).toLayer

@@ -1,19 +1,20 @@
 package genkai.redis.jedis
 
-import redis.clients.jedis.JedisPool
+import redis.clients.jedis.{Jedis, JedisPool}
 import genkai.monad.syntax._
 import genkai.monad.IdMonadError
 import genkai.redis.RedisConcurrentStrategy
-import genkai.{ConcurrentStrategy, Identity}
+import genkai.{ConcurrentStrategy, Id}
+import redis.clients.jedis.util.Pool
 
 class JedisSyncConcurrentRateLimiter private (
-  pool: JedisPool,
+  pool: Pool[Jedis],
   strategy: RedisConcurrentStrategy,
   closeClient: Boolean,
   acquireSha: String,
   releaseSha: String,
   permissionsSha: String
-) extends JedisConcurrentRateLimiter[Identity](
+) extends JedisConcurrentRateLimiter[Id](
       pool,
       IdMonadError,
       strategy,
@@ -25,7 +26,7 @@ class JedisSyncConcurrentRateLimiter private (
 
 object JedisSyncConcurrentRateLimiter {
   def apply(
-    pool: JedisPool,
+    pool: Pool[Jedis],
     strategy: ConcurrentStrategy
   ): JedisSyncConcurrentRateLimiter = {
     implicit val monad = IdMonadError

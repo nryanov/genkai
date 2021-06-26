@@ -36,4 +36,6 @@ trait MonadError[F[_]] {
   def flatten[A](fa: F[F[A]]): F[A] = flatMap(fa)(v => identity(v))
 
   def guarantee[A](f: => F[A])(g: => F[Unit]): F[A]
+
+  def bracket[A, B](acquire: => F[A])(use: A => F[B])(release: A => F[Unit]): F[B]
 }

@@ -1,6 +1,6 @@
 package genkai.redis.lettuce
 
-import genkai.{Identity, Strategy}
+import genkai.{Id, Strategy}
 import genkai.monad.IdMonadError
 import genkai.redis.RedisStrategy
 import io.lettuce.core.RedisClient
@@ -13,7 +13,7 @@ class LettuceSyncRateLimiter private (
   closeClient: Boolean,
   acquireSha: String,
   permissionsSha: String
-) extends LettuceRateLimiter[Identity](
+) extends LettuceRateLimiter[Id](
       client,
       connection,
       IdMonadError,

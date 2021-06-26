@@ -6,10 +6,11 @@ import genkai.monad.syntax._
 import genkai.effect.cats.CatsMonadError
 import genkai.redis.RedisStrategy
 import genkai.redis.jedis.JedisRateLimiter
-import redis.clients.jedis.JedisPool
+import redis.clients.jedis.util.Pool
+import redis.clients.jedis.{Jedis, JedisPool}
 
 class JedisCatsRateLimiter[F[_]: Sync: ContextShift] private (
-  pool: JedisPool,
+  pool: Pool[Jedis],
   strategy: RedisStrategy,
   closeClient: Boolean,
   acquireSha: String,
@@ -26,7 +27,7 @@ class JedisCatsRateLimiter[F[_]: Sync: ContextShift] private (
 
 object JedisCatsRateLimiter {
   def useClient[F[_]: Sync: ContextShift](
-    pool: JedisPool,
+    pool: Pool[Jedis],
     strategy: Strategy,
     blocker: Blocker
   ): F[JedisCatsRateLimiter[F]] = {

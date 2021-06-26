@@ -54,4 +54,15 @@ object TryMonadError extends MonadError[Try] {
       case Failure(exception) => suspend(g).flatMap(_ => Failure(exception))
       case Success(value)     => suspend(g).map(_ => value)
     }
+
+  override def bracket[A, B](acquire: => Try[A])(use: A => Try[B])(
+    release: A => Try[Unit]
+  ): Try[B] =
+    Try(acquire).flatten.flatMap { resource =>
+      Try(use(resource)).flatten match {
+        case Failure(exception) => Try(release(resource)).flatten.flatMap(_ => Failure(exception))
+        case Success(value)     => Try(release(resource)).flatten.map(_ => value)
+      }
+    }
+
 }
