@@ -37,7 +37,7 @@ object JedisSyncRateLimiter {
           client.scriptLoad(redisStrategy.permissionsLuaScript)
         )
       )
-    )(resource => monad.eval(monad.eval(resource.close())))
+    )(resource => monad.eval(resource.close()))
     new JedisSyncRateLimiter(
       pool = pool,
       strategy = redisStrategy,
@@ -63,7 +63,7 @@ object JedisSyncRateLimiter {
           client.scriptLoad(redisStrategy.permissionsLuaScript)
         )
       )
-    )(resource => monad.eval(monad.eval(resource.close())))
+    )(resource => monad.eval(resource.close()))
     new JedisSyncRateLimiter(
       pool = pool,
       strategy = redisStrategy,

@@ -43,7 +43,7 @@ object JedisCatsRateLimiter {
             client.scriptLoad(redisStrategy.permissionsLuaScript)
           )
         )
-      )(resource => monad.eval(monad.eval(resource.close())))
+      )(resource => monad.eval(resource.close()))
       .map { case (acquireSha, permissionsSha) =>
         new JedisCatsRateLimiter(
           pool = pool,
@@ -76,7 +76,7 @@ object JedisCatsRateLimiter {
               client.scriptLoad(redisStrategy.permissionsLuaScript)
             )
           )
-        )(resource => monad.eval(monad.eval(resource.close())))
+        )(resource => monad.eval(resource.close()))
       } yield new JedisCatsRateLimiter(
         pool = pool,
         strategy = redisStrategy,
