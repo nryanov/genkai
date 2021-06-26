@@ -36,17 +36,14 @@ object JedisCatsRateLimiter {
     val redisStrategy = RedisStrategy(strategy)
 
     monad
-      .eval(pool.getResource)
-      .flatMap { client =>
-        monad.guarantee {
-          monad.eval {
-            (
-              client.scriptLoad(redisStrategy.acquireLuaScript),
-              client.scriptLoad(redisStrategy.permissionsLuaScript)
-            )
-          }
-        }(monad.eval(client.close()))
-      }
+      .bracket(monad.eval(pool.getResource))(client =>
+        monad.eval(
+          (
+            client.scriptLoad(redisStrategy.acquireLuaScript),
+            client.scriptLoad(redisStrategy.permissionsLuaScript)
+          )
+        )
+      )(resource => monad.eval(monad.eval(resource.close())))
       .map { case (acquireSha, permissionsSha) =>
         new JedisCatsRateLimiter(
           pool = pool,
@@ -72,16 +69,14 @@ object JedisCatsRateLimiter {
     Resource.make {
       for {
         pool <- monad.eval(new JedisPool(host, port))
-        sha <- monad.eval(pool.getResource).flatMap { client =>
-          monad.guarantee {
-            monad.eval {
-              (
-                client.scriptLoad(redisStrategy.acquireLuaScript),
-                client.scriptLoad(redisStrategy.permissionsLuaScript)
-              )
-            }
-          }(monad.eval(client.close()))
-        }
+        sha <- monad.bracket(monad.eval(pool.getResource))(client =>
+          monad.eval(
+            (
+              client.scriptLoad(redisStrategy.acquireLuaScript),
+              client.scriptLoad(redisStrategy.permissionsLuaScript)
+            )
+          )
+        )(resource => monad.eval(monad.eval(resource.close())))
       } yield new JedisCatsRateLimiter(
         pool = pool,
         strategy = redisStrategy,

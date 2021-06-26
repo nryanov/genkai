@@ -35,17 +35,15 @@ object JedisZioConcurrentRateLimiter {
     blocker <- ZIO.service[Blocking.Service]
     monad = new ZioMonadError(blocker)
     redisStrategy = RedisConcurrentStrategy(strategy)
-    sha <- monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee {
-        monad.eval {
-          (
-            client.scriptLoad(redisStrategy.acquireLuaScript),
-            client.scriptLoad(redisStrategy.releaseLuaScript),
-            client.scriptLoad(redisStrategy.permissionsLuaScript)
-          )
-        }
-      }(monad.eval(client.close()))
-    }
+    sha <- monad.bracket(monad.eval(pool.getResource))(client =>
+      monad.eval(
+        (
+          client.scriptLoad(redisStrategy.acquireLuaScript),
+          client.scriptLoad(redisStrategy.releaseLuaScript),
+          client.scriptLoad(redisStrategy.permissionsLuaScript)
+        )
+      )
+    )(resource => monad.eval(resource.close()))
   } yield new JedisZioConcurrentRateLimiter(
     pool = pool,
     strategy = redisStrategy,
@@ -73,17 +71,15 @@ object JedisZioConcurrentRateLimiter {
         monad = new ZioMonadError(blocker)
         redisStrategy = RedisConcurrentStrategy(strategy)
         pool <- monad.eval(new JedisPool(host, port))
-        sha <- monad.eval(pool.getResource).flatMap { client =>
-          monad.guarantee {
-            monad.eval {
-              (
-                client.scriptLoad(redisStrategy.acquireLuaScript),
-                client.scriptLoad(redisStrategy.releaseLuaScript),
-                client.scriptLoad(redisStrategy.permissionsLuaScript)
-              )
-            }
-          }(monad.eval(client.close()))
-        }
+        sha <- monad.bracket(monad.eval(pool.getResource))(client =>
+          monad.eval(
+            (
+              client.scriptLoad(redisStrategy.acquireLuaScript),
+              client.scriptLoad(redisStrategy.releaseLuaScript),
+              client.scriptLoad(redisStrategy.permissionsLuaScript)
+            )
+          )
+        )(resource => monad.eval(resource.close()))
       } yield new JedisZioConcurrentRateLimiter(
         pool = pool,
         strategy = redisStrategy,

@@ -32,15 +32,16 @@ object JedisSyncConcurrentRateLimiter {
     implicit val monad = IdMonadError
     val redisStrategy = RedisConcurrentStrategy(strategy)
 
-    val (acquireSha, releaseSha, permissionsSha) = monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee {
-        (
-          client.scriptLoad(redisStrategy.acquireLuaScript),
-          client.scriptLoad(redisStrategy.releaseLuaScript),
-          client.scriptLoad(redisStrategy.permissionsLuaScript)
+    val (acquireSha, releaseSha, permissionsSha) =
+      monad.bracket(monad.eval(pool.getResource))(client =>
+        monad.eval(
+          (
+            client.scriptLoad(redisStrategy.acquireLuaScript),
+            client.scriptLoad(redisStrategy.releaseLuaScript),
+            client.scriptLoad(redisStrategy.permissionsLuaScript)
+          )
         )
-      }(monad.eval(client.close()))
-    }
+      )(resource => monad.eval(resource.close()))
     new JedisSyncConcurrentRateLimiter(
       pool = pool,
       strategy = redisStrategy,
@@ -60,15 +61,16 @@ object JedisSyncConcurrentRateLimiter {
     val redisStrategy = RedisConcurrentStrategy(strategy)
     val pool = new JedisPool(host, port)
 
-    val (acquireSha, releaseSha, permissionsSha) = monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee {
-        (
-          client.scriptLoad(redisStrategy.acquireLuaScript),
-          client.scriptLoad(redisStrategy.releaseLuaScript),
-          client.scriptLoad(redisStrategy.permissionsLuaScript)
+    val (acquireSha, releaseSha, permissionsSha) =
+      monad.bracket(monad.eval(pool.getResource))(client =>
+        monad.eval(
+          (
+            client.scriptLoad(redisStrategy.acquireLuaScript),
+            client.scriptLoad(redisStrategy.releaseLuaScript),
+            client.scriptLoad(redisStrategy.permissionsLuaScript)
+          )
         )
-      }(monad.eval(client.close()))
-    }
+      )(resource => monad.eval(resource.close()))
     new JedisSyncConcurrentRateLimiter(
       pool = pool,
       strategy = redisStrategy,

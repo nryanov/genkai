@@ -38,18 +38,15 @@ object JedisCatsConcurrentRateLimiter {
     val redisStrategy = RedisConcurrentStrategy(strategy)
 
     monad
-      .eval(pool.getResource)
-      .flatMap { client =>
-        monad.guarantee {
-          monad.eval {
-            (
-              client.scriptLoad(redisStrategy.acquireLuaScript),
-              client.scriptLoad(redisStrategy.releaseLuaScript),
-              client.scriptLoad(redisStrategy.permissionsLuaScript)
-            )
-          }
-        }(monad.eval(client.close()))
-      }
+      .bracket(monad.eval(pool.getResource))(client =>
+        monad.eval(
+          (
+            client.scriptLoad(redisStrategy.acquireLuaScript),
+            client.scriptLoad(redisStrategy.releaseLuaScript),
+            client.scriptLoad(redisStrategy.permissionsLuaScript)
+          )
+        )
+      )(resource => monad.eval(resource.close()))
       .map { case (acquireSha, releaseSha, permissionsSha) =>
         new JedisCatsConcurrentRateLimiter(
           pool = pool,
@@ -76,17 +73,15 @@ object JedisCatsConcurrentRateLimiter {
     Resource.make {
       for {
         pool <- monad.eval(new JedisPool(host, port))
-        sha <- monad.eval(pool.getResource).flatMap { client =>
-          monad.guarantee {
-            monad.eval {
-              (
-                client.scriptLoad(redisStrategy.acquireLuaScript),
-                client.scriptLoad(redisStrategy.releaseLuaScript),
-                client.scriptLoad(redisStrategy.permissionsLuaScript)
-              )
-            }
-          }(monad.eval(client.close()))
-        }
+        sha <- monad.bracket(monad.eval(pool.getResource))(client =>
+          monad.eval(
+            (
+              client.scriptLoad(redisStrategy.acquireLuaScript),
+              client.scriptLoad(redisStrategy.releaseLuaScript),
+              client.scriptLoad(redisStrategy.permissionsLuaScript)
+            )
+          )
+        )(resource => monad.eval(resource.close()))
       } yield new JedisCatsConcurrentRateLimiter(
         pool = pool,
         strategy = redisStrategy,

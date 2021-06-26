@@ -40,10 +40,13 @@ Class | Effect |
 `EitherRateLimiter` | `Either` 
 `AerospikeSyncRateLimiter` | None (`Identity`) 
 `AerospikeCatsRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
-`AerospikeZioRateLimiter` | `zio.Task` 
-`JedisSyncRateLimiter` | None (`Identity`)  
-`JedisCatsRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
-`JedisZioRateLimiter` | `zio.Task` 
+`AerospikeZioRateLimiter` | `zio.Task`
+`JedisClusterSyncRateLimiter` | None (`Identity`)  
+`JedisClusterCatsRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`JedisClusterZioRateLimiter` | `zio.Task` 
+`JedisSyncRateLimiter (sentinel/pool)` | None (`Identity`)  
+`JedisCatsRateLimiter (sentinel/pool)` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`JedisZioRateLimiter (sentinel/pool)` | `zio.Task` 
 `LettuceSyncRateLimiter` | None (`Identity`)  
 `LettuceAsyncRateLimiter` | `scala.concurrent.Future` 
 `LettuceCatsRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
@@ -64,10 +67,13 @@ Class | Effect |
 Class | Effect | 
 ------------ | ------------- 
 `TryConcurrentRateLimiter` | `scala.util.Try`
-`EitherConcurrentRateLimiter` | `Either` 
-`JedisSyncConcurrentRateLimiter` | None (`Identity`)  
-`JedisCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
-`JedisZioConcurrentRateLimiter` | `zio.Task` 
+`EitherConcurrentRateLimiter` | `Either`
+`JedisClusterSyncConcurrentRateLimiter` | None (`Identity`)  
+`JedisClusterCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`JedisClusterZioConcurrentRateLimiter` | `zio.Task` 
+`JedisSyncConcurrentRateLimiter (sentinel/pool)` | None (`Identity`)  
+`JedisCatsConcurrentRateLimiter (sentinel/pool)` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`JedisZioConcurrentRateLimiter (sentinel/pool)` | `zio.Task` 
 `LettuceSyncConcurrentRateLimiter` | None (`Identity`)  
 `LettuceAsyncConcurrentRateLimiter` | `scala.concurrent.Future` 
 `LettuceCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 

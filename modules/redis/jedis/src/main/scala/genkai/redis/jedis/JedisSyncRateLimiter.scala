@@ -30,14 +30,14 @@ object JedisSyncRateLimiter {
     implicit val monad = IdMonadError
     val redisStrategy = RedisStrategy(strategy)
 
-    val (acquireSha, permissionsSha) = monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee {
+    val (acquireSha, permissionsSha) = monad.bracket(monad.eval(pool.getResource))(client =>
+      monad.eval(
         (
           client.scriptLoad(redisStrategy.acquireLuaScript),
           client.scriptLoad(redisStrategy.permissionsLuaScript)
         )
-      }(monad.eval(client.close()))
-    }
+      )
+    )(resource => monad.eval(monad.eval(resource.close())))
     new JedisSyncRateLimiter(
       pool = pool,
       strategy = redisStrategy,
@@ -56,14 +56,14 @@ object JedisSyncRateLimiter {
     val redisStrategy = RedisStrategy(strategy)
     val pool = new JedisPool(host, port)
 
-    val (acquireSha, permissionsSha) = monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee {
+    val (acquireSha, permissionsSha) = monad.bracket(monad.eval(pool.getResource))(client =>
+      monad.eval(
         (
           client.scriptLoad(redisStrategy.acquireLuaScript),
           client.scriptLoad(redisStrategy.permissionsLuaScript)
         )
-      }(monad.eval(client.close()))
-    }
+      )
+    )(resource => monad.eval(monad.eval(resource.close())))
     new JedisSyncRateLimiter(
       pool = pool,
       strategy = redisStrategy,
