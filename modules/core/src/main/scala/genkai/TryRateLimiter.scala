@@ -7,7 +7,7 @@ import genkai.monad.{MonadError, TryMonadError}
 import scala.util.Try
 
 final class TryRateLimiter(
-  rateLimiter: RateLimiter[Identity]
+  rateLimiter: RateLimiter[Id]
 ) extends RateLimiter[Try] {
   override private[genkai] def permissions[A: Key](key: A, instant: Instant): Try[Long] =
     monadError.eval(rateLimiter.permissions(key, instant))

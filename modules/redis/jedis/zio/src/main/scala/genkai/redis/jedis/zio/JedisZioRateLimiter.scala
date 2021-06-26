@@ -5,11 +5,12 @@ import genkai.Strategy
 import genkai.effect.zio.ZioMonadError
 import genkai.redis.RedisStrategy
 import genkai.redis.jedis.JedisRateLimiter
-import redis.clients.jedis.JedisPool
+import redis.clients.jedis.util.Pool
+import redis.clients.jedis.{Jedis, JedisPool}
 import zio.blocking.{Blocking, blocking}
 
 class JedisZioRateLimiter private (
-  pool: JedisPool,
+  pool: Pool[Jedis],
   strategy: RedisStrategy,
   closeClient: Boolean,
   acquireSha: String,
@@ -19,22 +20,20 @@ class JedisZioRateLimiter private (
 
 object JedisZioRateLimiter {
   def useClient(
-    pool: JedisPool,
+    pool: Pool[Jedis],
     strategy: Strategy
   ): ZIO[Blocking, Throwable, JedisZioRateLimiter] = for {
     blocker <- ZIO.service[Blocking.Service]
     monad = new ZioMonadError(blocker)
     redisStrategy = RedisStrategy(strategy)
-    sha <- monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee {
-        monad.eval {
-          (
-            client.scriptLoad(redisStrategy.acquireLuaScript),
-            client.scriptLoad(redisStrategy.permissionsLuaScript)
-          )
-        }
-      }(monad.eval(client.close()))
-    }
+    sha <- monad.bracket(monad.eval(pool.getResource))(client =>
+      monad.eval(
+        (
+          client.scriptLoad(redisStrategy.acquireLuaScript),
+          client.scriptLoad(redisStrategy.permissionsLuaScript)
+        )
+      )
+    )(resource => monad.eval(resource.close()))
   } yield new JedisZioRateLimiter(
     pool = pool,
     strategy = redisStrategy,
@@ -45,7 +44,7 @@ object JedisZioRateLimiter {
   )
 
   def layerUsingClient(
-    pool: JedisPool,
+    pool: Pool[Jedis],
     strategy: Strategy
   ): ZLayer[Blocking, Throwable, Has[JedisZioRateLimiter]] =
     useClient(pool, strategy).toLayer
@@ -61,16 +60,14 @@ object JedisZioRateLimiter {
         monad = new ZioMonadError(blocker)
         redisStrategy = RedisStrategy(strategy)
         pool <- monad.eval(new JedisPool(host, port))
-        sha <- monad.eval(pool.getResource).flatMap { client =>
-          monad.guarantee {
-            monad.eval {
-              (
-                client.scriptLoad(redisStrategy.acquireLuaScript),
-                client.scriptLoad(redisStrategy.permissionsLuaScript)
-              )
-            }
-          }(monad.eval(client.close()))
-        }
+        sha <- monad.bracket(monad.eval(pool.getResource))(client =>
+          monad.eval(
+            (
+              client.scriptLoad(redisStrategy.acquireLuaScript),
+              client.scriptLoad(redisStrategy.permissionsLuaScript)
+            )
+          )
+        )(resource => monad.eval(resource.close()))
       } yield new JedisZioRateLimiter(
         pool = pool,
         strategy = redisStrategy,

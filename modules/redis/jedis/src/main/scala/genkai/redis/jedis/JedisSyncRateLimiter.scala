@@ -2,17 +2,18 @@ package genkai.redis.jedis
 
 import genkai.monad.IdMonadError
 import genkai.monad.syntax._
-import genkai.{Identity, Strategy}
+import genkai.{Id, Strategy}
 import genkai.redis.RedisStrategy
-import redis.clients.jedis.JedisPool
+import redis.clients.jedis.util.Pool
+import redis.clients.jedis.{Jedis, JedisPool}
 
 class JedisSyncRateLimiter private (
-  pool: JedisPool,
+  pool: Pool[Jedis],
   strategy: RedisStrategy,
   closeClient: Boolean,
   acquireSha: String,
   permissionsSha: String
-) extends JedisRateLimiter[Identity](
+) extends JedisRateLimiter[Id](
       pool,
       IdMonadError,
       strategy,
@@ -23,20 +24,20 @@ class JedisSyncRateLimiter private (
 
 object JedisSyncRateLimiter {
   def apply(
-    pool: JedisPool,
+    pool: Pool[Jedis],
     strategy: Strategy
   ): JedisSyncRateLimiter = {
     implicit val monad = IdMonadError
     val redisStrategy = RedisStrategy(strategy)
 
-    val (acquireSha, permissionsSha) = monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee {
+    val (acquireSha, permissionsSha) = monad.bracket(monad.eval(pool.getResource))(client =>
+      monad.eval(
         (
           client.scriptLoad(redisStrategy.acquireLuaScript),
           client.scriptLoad(redisStrategy.permissionsLuaScript)
         )
-      }(monad.eval(client.close()))
-    }
+      )
+    )(resource => monad.eval(resource.close()))
     new JedisSyncRateLimiter(
       pool = pool,
       strategy = redisStrategy,
@@ -55,14 +56,14 @@ object JedisSyncRateLimiter {
     val redisStrategy = RedisStrategy(strategy)
     val pool = new JedisPool(host, port)
 
-    val (acquireSha, permissionsSha) = monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee {
+    val (acquireSha, permissionsSha) = monad.bracket(monad.eval(pool.getResource))(client =>
+      monad.eval(
         (
           client.scriptLoad(redisStrategy.acquireLuaScript),
           client.scriptLoad(redisStrategy.permissionsLuaScript)
         )
-      }(monad.eval(client.close()))
-    }
+      )
+    )(resource => monad.eval(resource.close()))
     new JedisSyncRateLimiter(
       pool = pool,
       strategy = redisStrategy,

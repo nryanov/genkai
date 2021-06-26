@@ -79,4 +79,25 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
       case Right(value) => tryE.map(_ => value)
     }
   }
+
+  override def bracket[A, B](acquire: => Either[Throwable, A])(use: A => Either[Throwable, B])(
+    release: A => Either[Throwable, Unit]
+  ): Either[Throwable, B] = {
+    def tryUse(a: A): Either[Throwable, B] = Try(use(a)) match {
+      case Failure(exception) => Left(exception)
+      case Success(value)     => value
+    }
+
+    def tryRelease(a: A): Either[Throwable, Unit] = Try(release(a)) match {
+      case Failure(exception) => Left(exception)
+      case Success(value)     => value
+    }
+
+    acquire.flatMap { resource =>
+      tryUse(resource) match {
+        case Left(error)   => tryRelease(resource).flatMap(_ => Left(error))
+        case Right(result) => tryRelease(resource).map(_ => result)
+      }
+    }
+  }
 }

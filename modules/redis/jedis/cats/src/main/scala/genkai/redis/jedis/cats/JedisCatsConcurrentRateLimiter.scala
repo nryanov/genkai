@@ -6,10 +6,11 @@ import genkai.monad.syntax._
 import genkai.effect.cats.CatsMonadError
 import genkai.redis.RedisConcurrentStrategy
 import genkai.redis.jedis.JedisConcurrentRateLimiter
-import redis.clients.jedis.JedisPool
+import redis.clients.jedis.util.Pool
+import redis.clients.jedis.{Jedis, JedisPool}
 
 class JedisCatsConcurrentRateLimiter[F[_]: Sync: ContextShift] private (
-  pool: JedisPool,
+  pool: Pool[Jedis],
   strategy: RedisConcurrentStrategy,
   closeClient: Boolean,
   acquireSha: String,
@@ -28,7 +29,7 @@ class JedisCatsConcurrentRateLimiter[F[_]: Sync: ContextShift] private (
 
 object JedisCatsConcurrentRateLimiter {
   def useClient[F[_]: Sync: ContextShift](
-    pool: JedisPool,
+    pool: Pool[Jedis],
     strategy: ConcurrentStrategy,
     blocker: Blocker
   ): F[JedisCatsConcurrentRateLimiter[F]] = {
@@ -37,18 +38,15 @@ object JedisCatsConcurrentRateLimiter {
     val redisStrategy = RedisConcurrentStrategy(strategy)
 
     monad
-      .eval(pool.getResource)
-      .flatMap { client =>
-        monad.guarantee {
-          monad.eval {
-            (
-              client.scriptLoad(redisStrategy.acquireLuaScript),
-              client.scriptLoad(redisStrategy.releaseLuaScript),
-              client.scriptLoad(redisStrategy.permissionsLuaScript)
-            )
-          }
-        }(monad.eval(client.close()))
-      }
+      .bracket(monad.eval(pool.getResource))(client =>
+        monad.eval(
+          (
+            client.scriptLoad(redisStrategy.acquireLuaScript),
+            client.scriptLoad(redisStrategy.releaseLuaScript),
+            client.scriptLoad(redisStrategy.permissionsLuaScript)
+          )
+        )
+      )(resource => monad.eval(resource.close()))
       .map { case (acquireSha, releaseSha, permissionsSha) =>
         new JedisCatsConcurrentRateLimiter(
           pool = pool,
@@ -75,17 +73,15 @@ object JedisCatsConcurrentRateLimiter {
     Resource.make {
       for {
         pool <- monad.eval(new JedisPool(host, port))
-        sha <- monad.eval(pool.getResource).flatMap { client =>
-          monad.guarantee {
-            monad.eval {
-              (
-                client.scriptLoad(redisStrategy.acquireLuaScript),
-                client.scriptLoad(redisStrategy.releaseLuaScript),
-                client.scriptLoad(redisStrategy.permissionsLuaScript)
-              )
-            }
-          }(monad.eval(client.close()))
-        }
+        sha <- monad.bracket(monad.eval(pool.getResource))(client =>
+          monad.eval(
+            (
+              client.scriptLoad(redisStrategy.acquireLuaScript),
+              client.scriptLoad(redisStrategy.releaseLuaScript),
+              client.scriptLoad(redisStrategy.permissionsLuaScript)
+            )
+          )
+        )(resource => monad.eval(resource.close()))
       } yield new JedisCatsConcurrentRateLimiter(
         pool = pool,
         strategy = redisStrategy,

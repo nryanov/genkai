@@ -6,7 +6,7 @@ import genkai.monad.{MonadError, TryMonadError}
 
 import scala.util.{Failure, Success, Try}
 
-final class TryConcurrentRateLimiter(concurrentRateLimiter: ConcurrentRateLimiter[Identity])
+final class TryConcurrentRateLimiter(concurrentRateLimiter: ConcurrentRateLimiter[Id])
     extends ConcurrentRateLimiter[Try] {
   override private[genkai] def use[A: Key, B](key: A, instant: Instant)(
     f: => Try[B]

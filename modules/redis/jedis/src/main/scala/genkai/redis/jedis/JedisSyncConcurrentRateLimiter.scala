@@ -1,19 +1,20 @@
 package genkai.redis.jedis
 
-import redis.clients.jedis.JedisPool
+import redis.clients.jedis.{Jedis, JedisPool}
 import genkai.monad.syntax._
 import genkai.monad.IdMonadError
 import genkai.redis.RedisConcurrentStrategy
-import genkai.{ConcurrentStrategy, Identity}
+import genkai.{ConcurrentStrategy, Id}
+import redis.clients.jedis.util.Pool
 
 class JedisSyncConcurrentRateLimiter private (
-  pool: JedisPool,
+  pool: Pool[Jedis],
   strategy: RedisConcurrentStrategy,
   closeClient: Boolean,
   acquireSha: String,
   releaseSha: String,
   permissionsSha: String
-) extends JedisConcurrentRateLimiter[Identity](
+) extends JedisConcurrentRateLimiter[Id](
       pool,
       IdMonadError,
       strategy,
@@ -25,21 +26,22 @@ class JedisSyncConcurrentRateLimiter private (
 
 object JedisSyncConcurrentRateLimiter {
   def apply(
-    pool: JedisPool,
+    pool: Pool[Jedis],
     strategy: ConcurrentStrategy
   ): JedisSyncConcurrentRateLimiter = {
     implicit val monad = IdMonadError
     val redisStrategy = RedisConcurrentStrategy(strategy)
 
-    val (acquireSha, releaseSha, permissionsSha) = monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee {
-        (
-          client.scriptLoad(redisStrategy.acquireLuaScript),
-          client.scriptLoad(redisStrategy.releaseLuaScript),
-          client.scriptLoad(redisStrategy.permissionsLuaScript)
+    val (acquireSha, releaseSha, permissionsSha) =
+      monad.bracket(monad.eval(pool.getResource))(client =>
+        monad.eval(
+          (
+            client.scriptLoad(redisStrategy.acquireLuaScript),
+            client.scriptLoad(redisStrategy.releaseLuaScript),
+            client.scriptLoad(redisStrategy.permissionsLuaScript)
+          )
         )
-      }(monad.eval(client.close()))
-    }
+      )(resource => monad.eval(resource.close()))
     new JedisSyncConcurrentRateLimiter(
       pool = pool,
       strategy = redisStrategy,
@@ -59,15 +61,16 @@ object JedisSyncConcurrentRateLimiter {
     val redisStrategy = RedisConcurrentStrategy(strategy)
     val pool = new JedisPool(host, port)
 
-    val (acquireSha, releaseSha, permissionsSha) = monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee {
-        (
-          client.scriptLoad(redisStrategy.acquireLuaScript),
-          client.scriptLoad(redisStrategy.releaseLuaScript),
-          client.scriptLoad(redisStrategy.permissionsLuaScript)
+    val (acquireSha, releaseSha, permissionsSha) =
+      monad.bracket(monad.eval(pool.getResource))(client =>
+        monad.eval(
+          (
+            client.scriptLoad(redisStrategy.acquireLuaScript),
+            client.scriptLoad(redisStrategy.releaseLuaScript),
+            client.scriptLoad(redisStrategy.permissionsLuaScript)
+          )
         )
-      }(monad.eval(client.close()))
-    }
+      )(resource => monad.eval(resource.close()))
     new JedisSyncConcurrentRateLimiter(
       pool = pool,
       strategy = redisStrategy,

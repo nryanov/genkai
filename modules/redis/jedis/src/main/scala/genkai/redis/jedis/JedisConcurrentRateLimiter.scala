@@ -2,14 +2,15 @@ package genkai.redis.jedis
 
 import java.time.Instant
 
-import redis.clients.jedis.{Jedis, JedisPool}
+import redis.clients.jedis.Jedis
 import genkai.monad.syntax._
 import genkai.monad.MonadError
 import genkai.redis.RedisConcurrentStrategy
 import genkai.{ConcurrentLimitExhausted, ConcurrentRateLimiter, Key, Logging}
+import redis.clients.jedis.util.Pool
 
 abstract class JedisConcurrentRateLimiter[F[_]](
-  pool: JedisPool,
+  pool: Pool[Jedis],
   implicit val monad: MonadError[F],
   strategy: RedisConcurrentStrategy,
   closeClient: Boolean,
@@ -73,7 +74,7 @@ abstract class JedisConcurrentRateLimiter[F[_]](
   override def monadError: MonadError[F] = monad
 
   private def useClient[A](fa: Jedis => F[A]): F[A] =
-    monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee(fa(client))(monad.eval(client.close()))
-    }
+    monad.bracket(monad.eval(pool.getResource))(client => fa(client))(client =>
+      monad.eval(client.close())
+    )
 }

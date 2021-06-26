@@ -1,6 +1,6 @@
 package genkai.redis.redisson
 
-import genkai.{Identity, Strategy}
+import genkai.{Id, Strategy}
 import genkai.monad.IdMonadError
 import genkai.redis.RedisStrategy
 import org.redisson.Redisson
@@ -13,7 +13,7 @@ class RedissonSyncRateLimiter private (
   closeClient: Boolean,
   acquireSha: String,
   permissionsSha: String
-) extends RedissonRateLimiter[Identity](
+) extends RedissonRateLimiter[Id](
       client,
       IdMonadError,
       strategy,

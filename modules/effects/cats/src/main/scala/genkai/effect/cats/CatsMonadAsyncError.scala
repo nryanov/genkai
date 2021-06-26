@@ -51,4 +51,7 @@ final class CatsMonadAsyncError[F[_]](implicit F: Concurrent[F]) extends MonadAs
   override def flatten[A](fa: F[F[A]]): F[A] = F.flatten(fa)
 
   override def guarantee[A](f: => F[A])(g: => F[Unit]): F[A] = F.guarantee(f)(g)
+
+  override def bracket[A, B](acquire: => F[A])(use: A => F[B])(release: A => F[Unit]): F[B] =
+    F.bracket(acquire)(use)(release)
 }
