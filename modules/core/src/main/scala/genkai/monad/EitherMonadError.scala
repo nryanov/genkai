@@ -18,7 +18,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
   override def raiseError[A](error: Throwable): Either[Throwable, A] = Left(error)
 
   override def adaptError[A](
-    fa: Either[Throwable, A]
+    fa: => Either[Throwable, A]
   )(pf: PartialFunction[Throwable, Throwable]): Either[Throwable, A] =
     fa match {
       case Left(value) if pf.isDefinedAt(value) => raiseError(pf(value))
@@ -26,7 +26,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
     }
 
   override def mapError[A](
-    fa: Either[Throwable, A]
+    fa: => Either[Throwable, A]
   )(f: Throwable => Throwable): Either[Throwable, A] =
     fa match {
       case Left(value) => raiseError(f(value))
@@ -34,7 +34,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
     }
 
   override def handleError[A](
-    fa: Either[Throwable, A]
+    fa: => Either[Throwable, A]
   )(pf: PartialFunction[Throwable, A]): Either[Throwable, A] =
     fa match {
       case Left(value) if pf.isDefinedAt(value) => eval(pf(value))
@@ -42,7 +42,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
     }
 
   override def handleErrorWith[A](
-    fa: Either[Throwable, A]
+    fa: => Either[Throwable, A]
   )(pf: PartialFunction[Throwable, Either[Throwable, A]]): Either[Throwable, A] =
     fa match {
       case Left(value) if pf.isDefinedAt(value) => suspend(pf(value))
@@ -77,6 +77,27 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
     f match {
       case Left(value)  => tryE.flatMap(_ => Left(value))
       case Right(value) => tryE.map(_ => value)
+    }
+  }
+
+  override def bracket[A, B](acquire: => Either[Throwable, A])(use: A => Either[Throwable, B])(
+    release: A => Either[Throwable, Unit]
+  ): Either[Throwable, B] = {
+    def tryUse(a: A): Either[Throwable, B] = Try(use(a)) match {
+      case Failure(exception) => Left(exception)
+      case Success(value)     => value
+    }
+
+    def tryRelease(a: A): Either[Throwable, Unit] = Try(release(a)) match {
+      case Failure(exception) => Left(exception)
+      case Success(value)     => value
+    }
+
+    acquire.flatMap { resource =>
+      tryUse(resource) match {
+        case Left(error)   => tryRelease(resource).flatMap(_ => Left(error))
+        case Right(result) => tryRelease(resource).map(_ => result)
+      }
     }
   }
 }

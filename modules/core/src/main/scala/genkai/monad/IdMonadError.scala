@@ -1,47 +1,47 @@
 package genkai.monad
 
-import genkai.Identity
+import genkai.Id
 
-object IdMonadError extends MonadError[Identity] {
-  override def pure[A](value: A): Identity[A] = value
+object IdMonadError extends MonadError[Id] {
+  override def pure[A](value: A): Id[A] = value
 
-  override def map[A, B](fa: Identity[A])(f: A => B): Identity[B] = f(fa)
+  override def map[A, B](fa: Id[A])(f: A => B): Id[B] = f(fa)
 
-  override def flatMap[A, B](fa: Identity[A])(f: A => Identity[B]): Identity[B] = f(fa)
+  override def flatMap[A, B](fa: Id[A])(f: A => Id[B]): Id[B] = f(fa)
 
-  override def tap[A, B](fa: Identity[A])(f: A => Identity[B]): Identity[A] = {
+  override def tap[A, B](fa: Id[A])(f: A => Id[B]): Id[A] = {
     val r = fa
     f(r)
     r
   }
 
-  override def raiseError[A](error: Throwable): Identity[A] = throw error
+  override def raiseError[A](error: Throwable): Id[A] = throw error
 
-  override def adaptError[A](fa: Identity[A])(
+  override def adaptError[A](fa: => Id[A])(
     pf: PartialFunction[Throwable, Throwable]
-  ): Identity[A] =
+  ): Id[A] =
     try fa
     catch {
       case e: Throwable if pf.isDefinedAt(e) => raiseError(pf(e))
       case e: Throwable                      => raiseError(e)
     }
 
-  override def mapError[A](fa: Identity[A])(f: Throwable => Throwable): Identity[A] =
+  override def mapError[A](fa: => Id[A])(f: Throwable => Throwable): Id[A] =
     try fa
     catch {
       case e: Throwable => raiseError(f(e))
     }
 
-  override def handleError[A](fa: Identity[A])(pf: PartialFunction[Throwable, A]): Identity[A] =
+  override def handleError[A](fa: => Id[A])(pf: PartialFunction[Throwable, A]): Id[A] =
     try fa
     catch {
       case e: Throwable if pf.isDefinedAt(e) => pf(e)
       case e: Throwable                      => raiseError(pure(e))
     }
 
-  override def handleErrorWith[A](fa: Identity[A])(
-    pf: PartialFunction[Throwable, Identity[A]]
-  ): Identity[A] =
+  override def handleErrorWith[A](fa: => Id[A])(
+    pf: PartialFunction[Throwable, Id[A]]
+  ): Id[A] =
     try fa
     catch {
       case e: Throwable if pf.isDefinedAt(e) => pf(e)
@@ -49,20 +49,30 @@ object IdMonadError extends MonadError[Identity] {
     }
 
   override def ifM[A](
-    fcond: Identity[Boolean]
-  )(ifTrue: => Identity[A], ifFalse: => Identity[A]): Identity[A] =
+    fcond: Id[Boolean]
+  )(ifTrue: => Id[A], ifFalse: => Id[A]): Id[A] =
     if (fcond) ifTrue
     else ifFalse
 
-  override def whenA[A](cond: Boolean)(f: => Identity[A]): Identity[Unit] =
+  override def whenA[A](cond: Boolean)(f: => Id[A]): Id[Unit] =
     if (cond) f
     else unit
 
-  override def void[A](fa: Identity[A]): Identity[Unit] = unit
+  override def void[A](fa: Id[A]): Id[Unit] = unit
 
-  override def eval[A](f: => A): Identity[A] = f
+  override def eval[A](f: => A): Id[A] = f
 
-  override def guarantee[A](f: => Identity[A])(g: => Identity[Unit]): Identity[A] =
+  override def guarantee[A](f: => Id[A])(g: => Id[Unit]): Id[A] =
     try f
     finally g
+
+  override def bracket[A, B](acquire: => Id[A])(use: A => Id[B])(release: A => Id[Unit]): Id[B] = {
+    var a = null.asInstanceOf[A]
+    try {
+      a = acquire
+      use(a)
+    } finally if (a != null) {
+      release(a)
+    }
+  }
 }

@@ -15,21 +15,24 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
 
   override def raiseError[A](error: Throwable): Future[A] = Future.failed(error)
 
-  override def adaptError[A](fa: Future[A])(pf: PartialFunction[Throwable, Throwable]): Future[A] =
+  override def adaptError[A](
+    fa: => Future[A]
+  )(pf: PartialFunction[Throwable, Throwable]): Future[A] =
     fa.transformWith {
       case Failure(exception) if pf.isDefinedAt(exception) => raiseError(pf(exception))
       case _                                               => fa
     }
 
-  override def mapError[A](fa: Future[A])(f: Throwable => Throwable): Future[A] = fa.transformWith {
-    case Failure(exception) => raiseError(f(exception))
-    case _                  => fa
-  }
+  override def mapError[A](fa: => Future[A])(f: Throwable => Throwable): Future[A] =
+    fa.transformWith {
+      case Failure(exception) => raiseError(f(exception))
+      case _                  => fa
+    }
 
-  override def handleError[A](fa: Future[A])(pf: PartialFunction[Throwable, A]): Future[A] =
+  override def handleError[A](fa: => Future[A])(pf: PartialFunction[Throwable, A]): Future[A] =
     fa.recover(pf)
 
-  override def handleErrorWith[A](fa: Future[A])(
+  override def handleErrorWith[A](fa: => Future[A])(
     pf: PartialFunction[Throwable, Future[A]]
   ): Future[A] =
     fa.recoverWith(pf)
@@ -85,6 +88,33 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
       case Failure(exception) =>
         tryF.flatMap(_ => Future.failed(exception)).onComplete(r => p.complete(r))
       case Success(value) => tryF.map(_ => value).onComplete(r => p.complete(r))
+    }
+
+    p.future
+  }
+
+  override def bracket[A, B](acquire: => Future[A])(use: A => Future[B])(
+    release: A => Future[Unit]
+  ): Future[B] = {
+    val p = Promise[B]()
+
+    def tryRelease(a: A): Future[Unit] = Try(release(a)) match {
+      case Failure(exception) => Future.failed(exception)
+      case Success(value)     => value
+    }
+
+    def tryUse(a: A): Future[B] = Try(use(a)) match {
+      case Failure(exception) => Future.failed(exception)
+      case Success(value)     => value
+    }
+
+    acquire.onComplete {
+      case Failure(exception) => p.failure(exception)
+      case Success(resource) =>
+        tryUse(resource).onComplete {
+          case Failure(exception) => p.failure(exception)
+          case Success(result)    => tryRelease(resource).map(_ => result).onComplete(p.complete)
+        }
     }
 
     p.future

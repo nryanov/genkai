@@ -1,3 +1,3 @@
 package object genkai {
-  type Identity[A] = A
+  type Id[A] = A
 }

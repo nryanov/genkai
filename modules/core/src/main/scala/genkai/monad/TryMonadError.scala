@@ -13,23 +13,23 @@ object TryMonadError extends MonadError[Try] {
 
   override def raiseError[A](error: Throwable): Try[A] = Failure(error)
 
-  override def adaptError[A](fa: Try[A])(pf: PartialFunction[Throwable, Throwable]): Try[A] =
+  override def adaptError[A](fa: => Try[A])(pf: PartialFunction[Throwable, Throwable]): Try[A] =
     fa match {
       case Failure(exception) if pf.isDefinedAt(exception) => raiseError(pf(exception))
       case _                                               => fa
     }
 
-  override def mapError[A](fa: Try[A])(f: Throwable => Throwable): Try[A] = fa match {
+  override def mapError[A](fa: => Try[A])(f: Throwable => Throwable): Try[A] = fa match {
     case Failure(exception) => raiseError(f(exception))
     case _                  => fa
   }
 
-  override def handleError[A](fa: Try[A])(pf: PartialFunction[Throwable, A]): Try[A] = fa match {
+  override def handleError[A](fa: => Try[A])(pf: PartialFunction[Throwable, A]): Try[A] = fa match {
     case Failure(exception) if pf.isDefinedAt(exception) => eval(pf(exception))
     case _                                               => fa
   }
 
-  override def handleErrorWith[A](fa: Try[A])(pf: PartialFunction[Throwable, Try[A]]): Try[A] =
+  override def handleErrorWith[A](fa: => Try[A])(pf: PartialFunction[Throwable, Try[A]]): Try[A] =
     fa match {
       case Failure(exception) if pf.isDefinedAt(exception) => suspend(pf(exception))
       case _                                               => fa
@@ -54,4 +54,15 @@ object TryMonadError extends MonadError[Try] {
       case Failure(exception) => suspend(g).flatMap(_ => Failure(exception))
       case Success(value)     => suspend(g).map(_ => value)
     }
+
+  override def bracket[A, B](acquire: => Try[A])(use: A => Try[B])(
+    release: A => Try[Unit]
+  ): Try[B] =
+    Try(acquire).flatten.flatMap { resource =>
+      Try(use(resource)).flatten match {
+        case Failure(exception) => Try(release(resource)).flatten.flatMap(_ => Failure(exception))
+        case Success(value)     => Try(release(resource)).flatten.map(_ => value)
+      }
+    }
+
 }

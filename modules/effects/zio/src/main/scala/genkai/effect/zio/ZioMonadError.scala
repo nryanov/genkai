@@ -15,22 +15,24 @@ final class ZioMonadError(blocking: Blocking.Service) extends MonadError[Task] {
 
   override def raiseError[A](error: Throwable): Task[A] = Task.fail(error)
 
-  override def adaptError[A](fa: Task[A])(pf: PartialFunction[Throwable, Throwable]): Task[A] =
+  override def adaptError[A](fa: => Task[A])(pf: PartialFunction[Throwable, Throwable]): Task[A] =
     fa.mapError {
       case err: Throwable if pf.isDefinedAt(err) => pf(err)
       case err                                   => err
     }
 
-  override def mapError[A](fa: Task[A])(f: Throwable => Throwable): Task[A] =
+  override def mapError[A](fa: => Task[A])(f: Throwable => Throwable): Task[A] =
     fa.mapError(f)
 
-  override def handleError[A](fa: Task[A])(pf: PartialFunction[Throwable, A]): Task[A] =
+  override def handleError[A](fa: => Task[A])(pf: PartialFunction[Throwable, A]): Task[A] =
     fa.catchSome {
       case err: Throwable if pf.isDefinedAt(err) => Task.effect(pf(err))
       case err                                   => Task.fail(err)
     }
 
-  override def handleErrorWith[A](fa: Task[A])(pf: PartialFunction[Throwable, Task[A]]): Task[A] =
+  override def handleErrorWith[A](fa: => Task[A])(
+    pf: PartialFunction[Throwable, Task[A]]
+  ): Task[A] =
     fa.catchSome(pf)
 
   override def ifM[A](fcond: Task[Boolean])(ifTrue: => Task[A], ifFalse: => Task[A]): Task[A] =
@@ -52,4 +54,9 @@ final class ZioMonadError(blocking: Blocking.Service) extends MonadError[Task] {
 
   override def guarantee[A](f: => Task[A])(g: => Task[Unit]): Task[A] =
     f.ensuring(g.ignore)
+
+  override def bracket[A, B](acquire: => Task[A])(use: A => Task[B])(
+    release: A => Task[Unit]
+  ): Task[B] =
+    ZIO.bracket(acquire, (a: A) => release(a).orDie, use)
 }

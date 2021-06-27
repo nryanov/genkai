@@ -1,6 +1,6 @@
 package genkai.redis.lettuce
 
-import genkai.{ConcurrentStrategy, Identity}
+import genkai.{ConcurrentStrategy, Id}
 import genkai.monad.IdMonadError
 import genkai.redis.RedisConcurrentStrategy
 import io.lettuce.core.RedisClient
@@ -14,7 +14,7 @@ class LettuceSyncConcurrentRateLimiter private (
   acquireSha: String,
   releaseSha: String,
   permissionsSha: String
-) extends LettuceConcurrentRateLimiter[Identity](
+) extends LettuceConcurrentRateLimiter[Id](
       client,
       connection,
       monad = IdMonadError,

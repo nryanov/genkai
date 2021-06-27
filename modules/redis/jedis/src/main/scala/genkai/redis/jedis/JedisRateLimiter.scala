@@ -6,10 +6,11 @@ import genkai.monad.syntax._
 import genkai.monad.MonadError
 import genkai.redis.RedisStrategy
 import genkai.{Key, Logging, RateLimiter}
-import redis.clients.jedis.{Jedis, JedisPool}
+import redis.clients.jedis.util.Pool
+import redis.clients.jedis.Jedis
 
 abstract class JedisRateLimiter[F[_]](
-  pool: JedisPool,
+  pool: Pool[Jedis],
   implicit val monad: MonadError[F],
   strategy: RedisStrategy,
   closeClient: Boolean,
@@ -53,7 +54,7 @@ abstract class JedisRateLimiter[F[_]](
   override def monadError: MonadError[F] = monad
 
   private def useClient[A](fa: Jedis => F[A]): F[A] =
-    monad.eval(pool.getResource).flatMap { client =>
-      monad.guarantee(fa(client))(monad.eval(client.close()))
-    }
+    monad.bracket(monad.eval(pool.getResource))(client => fa(client))(client =>
+      monad.eval(client.close())
+    )
 }
