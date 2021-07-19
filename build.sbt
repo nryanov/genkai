@@ -14,7 +14,7 @@ lazy val slf4jApiVersion = "1.7.31"
 // test
 lazy val scalatestVersion = "3.2.9"
 lazy val testContainersVersion = "0.39.5"
-lazy val logbackVersion = "1.2.3"
+lazy val logbackVersion = "1.2.4"
 
 val scala2_12 = "2.12.13"
 val scala2_13 = "2.13.5"
