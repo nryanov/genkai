@@ -1,7 +1,7 @@
 package genkai.redis.redisson.zio
 
 import genkai.ConcurrentStrategy
-import genkai.effect.zio.ZioMonadError
+import genkai.effect.zio.ZioBlockingMonadError
 import genkai.redis.RedisConcurrentStrategy
 import genkai.redis.redisson.RedissonConcurrentRateLimiter
 import org.redisson.Redisson
@@ -12,7 +12,7 @@ import zio.blocking.{Blocking, blocking}
 
 class RedissonZioConcurrentRateLimiter private (
   client: RedissonClient,
-  monad: ZioMonadError,
+  monad: ZioBlockingMonadError,
   strategy: RedisConcurrentStrategy,
   closeClient: Boolean,
   acquireSha: String,
@@ -34,7 +34,7 @@ object RedissonZioConcurrentRateLimiter {
     strategy: ConcurrentStrategy
   ): ZIO[Blocking, Throwable, RedissonZioConcurrentRateLimiter] = for {
     blocker <- ZIO.service[Blocking.Service]
-    monad = new ZioMonadError(blocker)
+    monad = new ZioBlockingMonadError(blocker)
     redisStrategy = RedisConcurrentStrategy(strategy)
     sha <- monad.eval {
       (
@@ -66,7 +66,7 @@ object RedissonZioConcurrentRateLimiter {
     ZManaged.make {
       for {
         blocker <- ZIO.service[Blocking.Service]
-        monad = new ZioMonadError(blocker)
+        monad = new ZioBlockingMonadError(blocker)
         client <- monad.eval(Redisson.create(config))
         redisStrategy = RedisConcurrentStrategy(strategy)
         sha <- monad.eval {

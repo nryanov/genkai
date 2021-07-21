@@ -24,11 +24,11 @@ final class MonixMonadAsyncError extends MonadAsyncError[Task] {
 
   override def pure[A](value: A): Task[A] = Task.pure(value)
 
-  override def map[A, B](fa: Task[A])(f: A => B): Task[B] = fa.map(f)
+  override def map[A, B](fa: => Task[A])(f: A => B): Task[B] = fa.map(f)
 
-  override def flatMap[A, B](fa: Task[A])(f: A => Task[B]): Task[B] = fa.flatMap(f)
+  override def flatMap[A, B](fa: => Task[A])(f: A => Task[B]): Task[B] = fa.flatMap(f)
 
-  override def tap[A, B](fa: Task[A])(f: A => Task[B]): Task[A] = fa.tapEval(f)
+  override def tap[A, B](fa: => Task[A])(f: A => Task[B]): Task[A] = fa.tapEval(f)
 
   override def raiseError[A](error: Throwable): Task[A] = Task.raiseError(error)
 
@@ -50,7 +50,7 @@ final class MonixMonadAsyncError extends MonadAsyncError[Task] {
   ): Task[A] =
     fa.onErrorRecoverWith(pf)
 
-  override def ifM[A](fcond: Task[Boolean])(ifTrue: => Task[A], ifFalse: => Task[A]): Task[A] =
+  override def ifM[A](fcond: => Task[Boolean])(ifTrue: => Task[A], ifFalse: => Task[A]): Task[A] =
     fcond.flatMap { flag =>
       if (flag) ifTrue
       else ifFalse
@@ -58,7 +58,7 @@ final class MonixMonadAsyncError extends MonadAsyncError[Task] {
 
   override def whenA[A](cond: Boolean)(f: => Task[A]): Task[Unit] = Task.when(cond)(f.void)
 
-  override def void[A](fa: Task[A]): Task[Unit] = fa.void
+  override def void[A](fa: => Task[A]): Task[Unit] = fa.void
 
   override def eval[A](f: => A): Task[A] = Task.eval(f)
 
@@ -68,7 +68,7 @@ final class MonixMonadAsyncError extends MonadAsyncError[Task] {
 
   override def suspend[A](fa: => Task[A]): Task[A] = Task.suspend(fa)
 
-  override def flatten[A](fa: Task[Task[A]]): Task[A] = fa.flatten
+  override def flatten[A](fa: => Task[Task[A]]): Task[A] = fa.flatten
 
   override def bracket[A, B](acquire: => Task[A])(use: A => Task[B])(
     release: A => Task[Unit]

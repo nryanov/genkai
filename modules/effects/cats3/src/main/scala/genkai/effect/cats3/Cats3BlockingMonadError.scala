@@ -1,16 +1,9 @@
 package genkai.effect.cats3
 
-import cats.effect.Async
-import cats.syntax.option._
-import genkai.monad.MonadAsyncError
+import cats.effect.Sync
+import genkai.monad.MonadError
 
-class Cats3MonadAsyncError[F[_]](implicit F: Async[F]) extends MonadAsyncError[F] {
-  override def async[A](k: (Either[Throwable, A] => Unit) => Unit): F[A] =
-    F.async_(k)
-
-  override def cancelable[A](k: (Either[Throwable, A] => Unit) => () => F[Unit]): F[A] =
-    F.async(k.andThen(cb => F.delay(cb().some)))
-
+class Cats3BlockingMonadError[F[_]](implicit F: Sync[F]) extends MonadError[F] {
   override def pure[A](value: A): F[A] = F.pure(value)
 
   override def map[A, B](fa: => F[A])(f: A => B): F[B] = F.map(fa)(f)
@@ -43,7 +36,7 @@ class Cats3MonadAsyncError[F[_]](implicit F: Async[F]) extends MonadAsyncError[F
 
   override def void[A](fa: => F[A]): F[Unit] = F.void(fa)
 
-  override def eval[A](f: => A): F[A] = F.delay(f)
+  override def eval[A](f: => A): F[A] = F.blocking(f)
 
   override def unit: F[Unit] = F.unit
 

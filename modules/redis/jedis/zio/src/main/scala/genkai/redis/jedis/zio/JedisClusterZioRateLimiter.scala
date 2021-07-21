@@ -4,7 +4,7 @@ import zio._
 import zio.blocking.Blocking
 import genkai.Strategy
 import genkai.redis.RedisStrategy
-import genkai.effect.zio.ZioMonadError
+import genkai.effect.zio.ZioBlockingMonadError
 import redis.clients.jedis.JedisCluster
 import genkai.redis.jedis.JedisClusterRateLimiter
 
@@ -14,7 +14,7 @@ class JedisClusterZioRateLimiter private (
   closeClient: Boolean,
   acquireSha: String,
   permissionsSha: String,
-  monad: ZioMonadError
+  monad: ZioBlockingMonadError
 ) extends JedisClusterRateLimiter[Task](
       cluster = cluster,
       monad = monad,
@@ -30,7 +30,7 @@ object JedisClusterZioRateLimiter {
     strategy: Strategy
   ): ZIO[Blocking, Throwable, JedisClusterZioRateLimiter] = for {
     blocker <- ZIO.service[Blocking.Service]
-    monad = new ZioMonadError(blocker)
+    monad = new ZioBlockingMonadError(blocker)
     redisStrategy = RedisStrategy(strategy)
     sha <- monad.eval {
       (

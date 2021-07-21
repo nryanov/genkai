@@ -5,11 +5,11 @@ import scala.util.{Failure, Success, Try}
 object TryMonadError extends MonadError[Try] {
   override def pure[A](value: A): Try[A] = Try(value)
 
-  override def map[A, B](fa: Try[A])(f: A => B): Try[B] = fa.map(f)
+  override def map[A, B](fa: => Try[A])(f: A => B): Try[B] = fa.map(f)
 
-  override def flatMap[A, B](fa: Try[A])(f: A => Try[B]): Try[B] = fa.flatMap(f)
+  override def flatMap[A, B](fa: => Try[A])(f: A => Try[B]): Try[B] = fa.flatMap(f)
 
-  override def tap[A, B](fa: Try[A])(f: A => Try[B]): Try[A] = fa.flatMap(r => f(r).map(_ => r))
+  override def tap[A, B](fa: => Try[A])(f: A => Try[B]): Try[A] = fa.flatMap(r => f(r).map(_ => r))
 
   override def raiseError[A](error: Throwable): Try[A] = Failure(error)
 
@@ -35,7 +35,7 @@ object TryMonadError extends MonadError[Try] {
       case _                                               => fa
     }
 
-  override def ifM[A](fcond: Try[Boolean])(ifTrue: => Try[A], ifFalse: => Try[A]): Try[A] =
+  override def ifM[A](fcond: => Try[Boolean])(ifTrue: => Try[A], ifFalse: => Try[A]): Try[A] =
     fcond.flatMap { flag =>
       if (flag) ifTrue
       else ifFalse
@@ -45,7 +45,7 @@ object TryMonadError extends MonadError[Try] {
     if (cond) f.map(_ => ())
     else unit
 
-  override def void[A](fa: Try[A]): Try[Unit] = fa.map(_ => ())
+  override def void[A](fa: => Try[A]): Try[Unit] = fa.map(_ => ())
 
   override def eval[A](f: => A): Try[A] = Try(f)
 

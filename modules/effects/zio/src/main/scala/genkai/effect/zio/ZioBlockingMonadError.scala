@@ -4,14 +4,14 @@ import zio._
 import zio.blocking._
 import genkai.monad.MonadError
 
-final class ZioMonadError(blocking: Blocking.Service) extends MonadError[Task] {
+final class ZioBlockingMonadError(blocking: Blocking.Service) extends MonadError[Task] {
   override def pure[A](value: A): Task[A] = Task.succeed(value)
 
-  override def map[A, B](fa: Task[A])(f: A => B): Task[B] = fa.map(f)
+  override def map[A, B](fa: => Task[A])(f: A => B): Task[B] = fa.map(f)
 
-  override def flatMap[A, B](fa: Task[A])(f: A => Task[B]): Task[B] = fa.flatMap(f)
+  override def flatMap[A, B](fa: => Task[A])(f: A => Task[B]): Task[B] = fa.flatMap(f)
 
-  override def tap[A, B](fa: Task[A])(f: A => Task[B]): Task[A] = fa.tap(f)
+  override def tap[A, B](fa: => Task[A])(f: A => Task[B]): Task[A] = fa.tap(f)
 
   override def raiseError[A](error: Throwable): Task[A] = Task.fail(error)
 
@@ -35,22 +35,21 @@ final class ZioMonadError(blocking: Blocking.Service) extends MonadError[Task] {
   ): Task[A] =
     fa.catchSome(pf)
 
-  override def ifM[A](fcond: Task[Boolean])(ifTrue: => Task[A], ifFalse: => Task[A]): Task[A] =
+  override def ifM[A](fcond: => Task[Boolean])(ifTrue: => Task[A], ifFalse: => Task[A]): Task[A] =
     Task.ifM(fcond)(ifTrue, ifFalse)
 
   override def whenA[A](cond: Boolean)(f: => Task[A]): Task[Unit] =
     Task.when(cond)(f)
 
-  override def void[A](fa: Task[A]): Task[Unit] = fa.unit
+  override def void[A](fa: => Task[A]): Task[Unit] = fa.unit
 
   override def eval[A](f: => A): Task[A] = blocking.effectBlocking(f)
 
   override def unit: Task[Unit] = Task.unit
 
-  override def suspend[A](fa: => Task[A]): Task[A] =
-    blocking.blocking(fa)
+  override def suspend[A](fa: => Task[A]): Task[A] = Task.effectSuspend(fa)
 
-  override def flatten[A](fa: Task[Task[A]]): Task[A] = Task.flatten(fa)
+  override def flatten[A](fa: => Task[Task[A]]): Task[A] = Task.flatten(fa)
 
   override def guarantee[A](f: => Task[A])(g: => Task[Unit]): Task[A] =
     f.ensuring(g.ignore)
