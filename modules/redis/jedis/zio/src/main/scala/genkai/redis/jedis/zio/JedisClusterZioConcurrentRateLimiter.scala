@@ -4,10 +4,9 @@ import zio._
 import genkai.ConcurrentStrategy
 import genkai.effect.zio.ZioBlockingMonadError
 import genkai.redis.RedisConcurrentStrategy
-import genkai.redis.jedis.{JedisClusterConcurrentRateLimiter, JedisConcurrentRateLimiter}
-import redis.clients.jedis.util.Pool
-import redis.clients.jedis.{Jedis, JedisCluster, JedisPool}
-import zio.blocking.{Blocking, blocking}
+import genkai.redis.jedis.JedisClusterConcurrentRateLimiter
+import redis.clients.jedis.JedisCluster
+import zio.blocking.Blocking
 
 class JedisClusterZioConcurrentRateLimiter private (
   cluster: JedisCluster,

@@ -4,7 +4,7 @@ import java.time.Instant
 
 import genkai.monad.syntax._
 import genkai.monad.MonadError
-import genkai.{Key, Logging, RateLimiter}
+import genkai.{Key, RateLimiter}
 import com.aerospike.client.AerospikeClient
 import com.aerospike.client.policy.WritePolicy
 
@@ -14,8 +14,7 @@ abstract class AerospikeRateLimiter[F[_]](
   implicit val monad: MonadError[F],
   strategy: AerospikeStrategy,
   closeClient: Boolean
-) extends RateLimiter[F]
-    with Logging[F] {
+) extends RateLimiter[F] {
 
   private val writePolicy = new WritePolicy(client.writePolicyDefault)
   writePolicy.expiration = strategy.expiration
@@ -24,7 +23,7 @@ abstract class AerospikeRateLimiter[F[_]](
     val keyStr = strategy.key(namespace, key, instant)
     val args = strategy.permissionsArgs(instant)
 
-    debug(s"Permissions request ($keyStr): $args") *> monad
+    monad
       .eval(
         client.execute(
           writePolicy,
@@ -40,14 +39,14 @@ abstract class AerospikeRateLimiter[F[_]](
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
     val keyStr = strategy.key(namespace, key, now)
-    debug(s"Reset limits for: $keyStr") *> monad.eval(client.delete(writePolicy, keyStr)).void
+    monad.eval(client.delete(writePolicy, keyStr)).void
   }
 
   override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
     val keyStr = strategy.key(namespace, key, instant)
     val args = strategy.acquireArgs(instant, cost)
 
-    debug(s"Acquire request ($keyStr): $args") *> monad
+    monad
       .eval(
         client
           .execute(writePolicy, keyStr, strategy.packageName, strategy.acquireFunction, args: _*)

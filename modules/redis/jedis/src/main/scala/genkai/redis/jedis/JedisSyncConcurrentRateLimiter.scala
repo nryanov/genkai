@@ -1,7 +1,6 @@
 package genkai.redis.jedis
 
 import redis.clients.jedis.{Jedis, JedisPool}
-import genkai.monad.syntax._
 import genkai.monad.IdMonadError
 import genkai.redis.RedisConcurrentStrategy
 import genkai.{ConcurrentStrategy, Id}

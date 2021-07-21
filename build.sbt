@@ -9,8 +9,6 @@ lazy val catsVersion = "2.5.1"
 lazy val cats3Version = "3.1.1"
 lazy val zioVersion = "1.0.9"
 lazy val monixVersion = "3.4.0"
-// logging
-lazy val slf4jApiVersion = "1.7.31"
 // test
 lazy val scalatestVersion = "3.2.9"
 lazy val testContainersVersion = "0.39.5"
@@ -94,22 +92,27 @@ lazy val genkai =
     .aggregate(
       core,
       cats,
+      cats3,
       zio,
       monix,
       redisCommon,
       jedis,
       jedisCats,
+      jedisCats3,
       jedisZio,
       lettuce,
       lettuceCats,
+      lettuceCats3,
       lettuceZio,
       lettuceMonix,
       redisson,
       redissonCats,
+      redissonCats3,
       redissonZio,
       redissonMonix,
       aerospike,
       aerospikeCats,
+      aerospikeCats3,
       aerospikeZio
     )
 
@@ -119,7 +122,6 @@ lazy val core = project
   .settings(moduleName := "genkai-core")
   .settings(
     libraryDependencies ++= Seq(
-      "org.slf4j" % "slf4j-api" % slf4jApiVersion,
       "org.scalatest" %% "scalatest" % scalatestVersion % Test,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Test,
       "com.dimafeng" %% "testcontainers-scala" % testContainersVersion % Test

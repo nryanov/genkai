@@ -3,7 +3,7 @@ package genkai.redis.lettuce
 import java.time.Instant
 
 import genkai.monad.syntax._
-import genkai.{ConcurrentLimitExhausted, ConcurrentRateLimiter, Key, Logging}
+import genkai.{ConcurrentLimitExhausted, ConcurrentRateLimiter, Key}
 import genkai.monad.MonadError
 import genkai.redis.RedisConcurrentStrategy
 import io.lettuce.core.{RedisClient, ScriptOutputType}
@@ -18,8 +18,7 @@ abstract class LettuceConcurrentRateLimiter[F[_]](
   acquireSha: String,
   releaseSha: String,
   permissionsSha: String
-) extends ConcurrentRateLimiter[F]
-    with Logging[F] {
+) extends ConcurrentRateLimiter[F] {
 
   private val syncCommands = connection.sync()
 
@@ -27,7 +26,7 @@ abstract class LettuceConcurrentRateLimiter[F[_]](
     val keyStr = strategy.keys(key, instant)
     val args = strategy.permissionsArgs(instant)
 
-    debug(s"Permissions request ($keyStr): $args") *> monad
+    monad
       .eval(
         syncCommands.evalsha[Long](
           permissionsSha,
@@ -42,8 +41,7 @@ abstract class LettuceConcurrentRateLimiter[F[_]](
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
     val keyStr = strategy.keys(key, now)
-    debug(s"Reset limits for: $keyStr") *>
-      monad.eval(syncCommands.unlink(keyStr: _*)).void
+    monad.eval(syncCommands.unlink(keyStr: _*)).void
   }
 
   override private[genkai] def use[A: Key, B](key: A, instant: Instant)(
@@ -61,7 +59,7 @@ abstract class LettuceConcurrentRateLimiter[F[_]](
     val keyStr = strategy.keys(key, instant)
     val args = strategy.releaseArgs(instant)
 
-    debug(s"Release request ($keyStr): $args") *> monad
+    monad
       .eval(
         syncCommands.evalsha[Long](
           releaseSha,
@@ -77,7 +75,7 @@ abstract class LettuceConcurrentRateLimiter[F[_]](
     val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant)
 
-    debug(s"Acquire request ($keyStr): $args") *> monad
+    monad
       .eval(
         syncCommands.evalsha[Long](
           acquireSha,

@@ -3,7 +3,7 @@ package genkai.redis.redisson
 import java.time.Instant
 
 import genkai.monad.syntax._
-import genkai.{ConcurrentLimitExhausted, ConcurrentRateLimiter, Key, Logging}
+import genkai.{ConcurrentLimitExhausted, ConcurrentRateLimiter, Key}
 import genkai.redis.RedisConcurrentStrategy
 import genkai.monad.{MonadAsyncError, MonadError}
 import org.redisson.api.{RFuture, RScript, RedissonClient}
@@ -19,8 +19,7 @@ abstract class RedissonAsyncConcurrentRateLimiter[F[_]](
   acquireSha: String,
   releaseSha: String,
   permissionsSha: String
-) extends ConcurrentRateLimiter[F]
-    with Logging[F] {
+) extends ConcurrentRateLimiter[F] {
   /* to avoid unnecessary memory allocations */
   private val scriptCommand: RScript = client.getScript(new StringCodec)
 
@@ -28,42 +27,40 @@ abstract class RedissonAsyncConcurrentRateLimiter[F[_]](
     val keyStr = strategy.keys(key, instant)
     val args = strategy.permissionsArgs(instant)
 
-    debug(s"Permissions request ($keyStr): $args") *>
-      monad
-        .cancelable[Long] { cb =>
-          val cf = evalShaAsync(
-            permissionsSha,
-            new java.util.LinkedList[Object](keyStr.asJava),
-            args
-          )
+    monad
+      .cancelable[Long] { cb =>
+        val cf = evalShaAsync(
+          permissionsSha,
+          new java.util.LinkedList[Object](keyStr.asJava),
+          args
+        )
 
-          cf.onComplete { (res: Long, err: Throwable) =>
-            if (err != null) cb(Left(err))
-            else cb(Right(res))
-          }
-
-          () => monad.eval(cf.cancel(true))
+        cf.onComplete { (res: Long, err: Throwable) =>
+          if (err != null) cb(Left(err))
+          else cb(Right(res))
         }
-        .map(tokens => strategy.toPermissions(tokens))
+
+        () => monad.eval(cf.cancel(true))
+      }
+      .map(tokens => strategy.toPermissions(tokens))
   }
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
     val keyStr = strategy.keys(key, now)
 
-    debug(s"Reset limits for: $keyStr") *>
-      monad
-        .cancelable[Unit] { cb =>
-          val cf = client.getKeys.unlinkAsync(keyStr: _*)
+    monad
+      .cancelable[Unit] { cb =>
+        val cf = client.getKeys.unlinkAsync(keyStr: _*)
 
-          cf.onComplete { (_, err: Throwable) =>
-            if (err != null) cb(Left(err))
-            else cb(Right(()))
-          }
-
-          () => monad.eval(cf.cancel(true))
+        cf.onComplete { (_, err: Throwable) =>
+          if (err != null) cb(Left(err))
+          else cb(Right(()))
         }
-        .void
+
+        () => monad.eval(cf.cancel(true))
+      }
+      .void
   }
 
   override private[genkai] def use[A: Key, B](key: A, instant: Instant)(
@@ -81,46 +78,44 @@ abstract class RedissonAsyncConcurrentRateLimiter[F[_]](
     val keyStr = strategy.keys(key, instant)
     val args = strategy.releaseArgs(instant)
 
-    debug(s"Release request ($keyStr): $args") *>
-      monad
-        .cancelable[Long] { cb =>
-          val cf = evalShaAsync(
-            releaseSha,
-            new java.util.LinkedList[Object](keyStr.asJava),
-            args
-          )
+    monad
+      .cancelable[Long] { cb =>
+        val cf = evalShaAsync(
+          releaseSha,
+          new java.util.LinkedList[Object](keyStr.asJava),
+          args
+        )
 
-          cf.onComplete { (res: Long, err: Throwable) =>
-            if (err != null) cb(Left(err))
-            else cb(Right(res))
-          }
-
-          () => monad.eval(cf.cancel(true))
+        cf.onComplete { (res: Long, err: Throwable) =>
+          if (err != null) cb(Left(err))
+          else cb(Right(res))
         }
-        .map(tokens => strategy.isReleased(tokens))
+
+        () => monad.eval(cf.cancel(true))
+      }
+      .map(tokens => strategy.isReleased(tokens))
   }
 
   override private[genkai] def acquire[A: Key](key: A, instant: Instant): F[Boolean] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant)
 
-    debug(s"Acquire request ($keyStr): $args") *>
-      monad
-        .cancelable[Long] { cb =>
-          val cf = evalShaAsync(
-            acquireSha,
-            new java.util.LinkedList[Object](keyStr.asJava),
-            args
-          )
+    monad
+      .cancelable[Long] { cb =>
+        val cf = evalShaAsync(
+          acquireSha,
+          new java.util.LinkedList[Object](keyStr.asJava),
+          args
+        )
 
-          cf.onComplete { (res: Long, err: Throwable) =>
-            if (err != null) cb(Left(err))
-            else cb(Right(res))
-          }
-
-          () => monad.eval(cf.cancel(true))
+        cf.onComplete { (res: Long, err: Throwable) =>
+          if (err != null) cb(Left(err))
+          else cb(Right(res))
         }
-        .map(tokens => strategy.isAllowed(tokens))
+
+        () => monad.eval(cf.cancel(true))
+      }
+      .map(tokens => strategy.isAllowed(tokens))
   }
 
   override def close(): F[Unit] = monad.ifM(monad.pure(closeClient))(

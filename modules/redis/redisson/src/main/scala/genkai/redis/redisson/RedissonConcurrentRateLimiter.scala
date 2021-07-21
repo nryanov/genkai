@@ -3,7 +3,7 @@ package genkai.redis.redisson
 import java.time.Instant
 
 import genkai.monad.syntax._
-import genkai.{ConcurrentLimitExhausted, ConcurrentRateLimiter, Key, Logging}
+import genkai.{ConcurrentLimitExhausted, ConcurrentRateLimiter, Key}
 import genkai.monad.MonadError
 import genkai.redis.RedisConcurrentStrategy
 import org.redisson.api.{RScript, RedissonClient}
@@ -19,8 +19,7 @@ abstract class RedissonConcurrentRateLimiter[F[_]](
   acquireSha: String,
   releaseSha: String,
   permissionsSha: String
-) extends ConcurrentRateLimiter[F]
-    with Logging[F] {
+) extends ConcurrentRateLimiter[F] {
   /* to avoid unnecessary memory allocations */
   private val scriptCommand: RScript = client.getScript(new StringCodec)
 
@@ -28,23 +27,21 @@ abstract class RedissonConcurrentRateLimiter[F[_]](
     val keyStr = strategy.keys(key, instant)
     val args = strategy.permissionsArgs(instant)
 
-    debug(s"Permissions request ($keyStr): $args") *>
-      monad
-        .eval(
-          evalSha(
-            permissionsSha,
-            new java.util.LinkedList[Object](keyStr.asJava),
-            args
-          )
+    monad
+      .eval(
+        evalSha(
+          permissionsSha,
+          new java.util.LinkedList[Object](keyStr.asJava),
+          args
         )
-        .map(strategy.toPermissions)
+      )
+      .map(strategy.toPermissions)
   }
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
     val keyStr = strategy.keys(key, now)
-    debug(s"Reset limits for: $keyStr") *>
-      monad.eval(client.getKeys.unlink(keyStr: _*)).void
+    monad.eval(client.getKeys.unlink(keyStr: _*)).void
   }
 
   override private[genkai] def use[A: Key, B](key: A, instant: Instant)(
@@ -62,32 +59,30 @@ abstract class RedissonConcurrentRateLimiter[F[_]](
     val keyStr = strategy.keys(key, instant)
     val args = strategy.releaseArgs(instant)
 
-    debug(s"Release request ($keyStr): $args") *>
-      monad
-        .eval(
-          evalSha(
-            releaseSha,
-            new java.util.LinkedList[Object](keyStr.asJava),
-            args
-          )
+    monad
+      .eval(
+        evalSha(
+          releaseSha,
+          new java.util.LinkedList[Object](keyStr.asJava),
+          args
         )
-        .map(strategy.isReleased)
+      )
+      .map(strategy.isReleased)
   }
 
   override def acquire[A: Key](key: A, instant: Instant): F[Boolean] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant)
 
-    debug(s"Acquire request ($keyStr): $args") *>
-      monad
-        .eval(
-          evalSha(
-            acquireSha,
-            new java.util.LinkedList[Object](keyStr.asJava),
-            args
-          )
+    monad
+      .eval(
+        evalSha(
+          acquireSha,
+          new java.util.LinkedList[Object](keyStr.asJava),
+          args
         )
-        .map(strategy.isAllowed)
+      )
+      .map(strategy.isAllowed)
   }
 
   override def close(): F[Unit] =
