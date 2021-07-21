@@ -69,10 +69,13 @@ abstract class RedissonAsyncConcurrentRateLimiter[F[_]](
   override private[genkai] def use[A: Key, B](key: A, instant: Instant)(
     f: => F[B]
   ): F[Either[ConcurrentLimitExhausted[A], B]] =
-    monad.ifM(acquire(key, instant))(
-      ifTrue = monad.guarantee(f)(release(key, instant).void).map(r => Right(r)),
-      ifFalse = monad.pure(Left(ConcurrentLimitExhausted(key)))
-    )
+    monad.bracket(acquire(key, instant)) { acquired =>
+      monad.ifM(monad.pure(acquired))(
+        ifTrue = monad.suspend(f).map[Either[ConcurrentLimitExhausted[A], B]](r => Right(r)),
+        ifFalse =
+          monad.pure[Either[ConcurrentLimitExhausted[A], B]](Left(ConcurrentLimitExhausted(key)))
+      )
+    }(acquired => monad.whenA(acquired)(release(key, instant).void))
 
   override private[genkai] def release[A: Key](key: A, instant: Instant): F[Boolean] = {
     val keyStr = strategy.keys(key, instant)
