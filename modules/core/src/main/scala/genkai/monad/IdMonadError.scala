@@ -58,7 +58,10 @@ object IdMonadError extends MonadError[Id] {
     if (cond) f
     else unit
 
-  override def void[A](fa: => Id[A]): Id[Unit] = unit
+  override def void[A](fa: => Id[A]): Id[Unit] = {
+    fa
+    unit
+  }
 
   override def eval[A](f: => A): Id[A] = f
 
