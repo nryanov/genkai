@@ -2,7 +2,7 @@ package genkai.redis.jedis.zio
 
 import zio._
 import genkai.ConcurrentStrategy
-import genkai.effect.zio.ZioMonadError
+import genkai.effect.zio.ZioBlockingMonadError
 import genkai.redis.RedisConcurrentStrategy
 import genkai.redis.jedis.JedisConcurrentRateLimiter
 import redis.clients.jedis.util.Pool
@@ -16,7 +16,7 @@ class JedisZioConcurrentRateLimiter private (
   acquireSha: String,
   releaseSha: String,
   permissionsSha: String,
-  monad: ZioMonadError
+  monad: ZioBlockingMonadError
 ) extends JedisConcurrentRateLimiter[Task](
       pool,
       monad = monad,
@@ -33,7 +33,7 @@ object JedisZioConcurrentRateLimiter {
     strategy: ConcurrentStrategy
   ): ZIO[Blocking, Throwable, JedisZioConcurrentRateLimiter] = for {
     blocker <- ZIO.service[Blocking.Service]
-    monad = new ZioMonadError(blocker)
+    monad = new ZioBlockingMonadError(blocker)
     redisStrategy = RedisConcurrentStrategy(strategy)
     sha <- monad.bracket(monad.eval(pool.getResource))(client =>
       monad.eval(
@@ -68,7 +68,7 @@ object JedisZioConcurrentRateLimiter {
     ZManaged.make {
       for {
         blocker <- ZIO.service[Blocking.Service]
-        monad = new ZioMonadError(blocker)
+        monad = new ZioBlockingMonadError(blocker)
         redisStrategy = RedisConcurrentStrategy(strategy)
         pool <- monad.eval(new JedisPool(host, port))
         sha <- monad.bracket(monad.eval(pool.getResource))(client =>

@@ -6,11 +6,11 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncError[Future] {
   override def pure[A](value: A): Future[A] = Future.successful(value)
 
-  override def map[A, B](fa: Future[A])(f: A => B): Future[B] = fa.map(f)
+  override def map[A, B](fa: => Future[A])(f: A => B): Future[B] = fa.map(f)
 
-  override def flatMap[A, B](fa: Future[A])(f: A => Future[B]): Future[B] = fa.flatMap(f)
+  override def flatMap[A, B](fa: => Future[A])(f: A => Future[B]): Future[B] = fa.flatMap(f)
 
-  override def tap[A, B](fa: Future[A])(f: A => Future[B]): Future[A] =
+  override def tap[A, B](fa: => Future[A])(f: A => Future[B]): Future[A] =
     fa.flatMap(r => f(r).map(_ => r))
 
   override def raiseError[A](error: Throwable): Future[A] = Future.failed(error)
@@ -38,7 +38,7 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
     fa.recoverWith(pf)
 
   override def ifM[A](
-    fcond: Future[Boolean]
+    fcond: => Future[Boolean]
   )(ifTrue: => Future[A], ifFalse: => Future[A]): Future[A] =
     fcond.flatMap { flag =>
       if (flag) ifTrue
@@ -49,7 +49,7 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
     if (cond) f.map(_ => ())
     else unit
 
-  override def void[A](fa: Future[A]): Future[Unit] = fa.map(_ => ())
+  override def void[A](fa: => Future[A]): Future[Unit] = fa.map(_ => ())
 
   override def eval[A](f: => A): Future[A] = Future(f)
 
@@ -79,15 +79,10 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
   override def guarantee[A](f: => Future[A])(g: => Future[Unit]): Future[A] = {
     val p = Promise[A]()
 
-    def tryF = Try(g) match {
-      case Failure(exception) => Future.failed(exception)
-      case Success(value)     => value
-    }
-
-    f.onComplete {
+    suspend(f).onComplete {
       case Failure(exception) =>
-        tryF.flatMap(_ => Future.failed(exception)).onComplete(r => p.complete(r))
-      case Success(value) => tryF.map(_ => value).onComplete(r => p.complete(r))
+        suspend(g).flatMap(_ => Future.failed(exception)).onComplete(r => p.complete(r))
+      case Success(value) => suspend(g).map(_ => value).onComplete(r => p.complete(r))
     }
 
     p.future
@@ -98,22 +93,13 @@ class FutureMonadAsyncError(implicit ec: ExecutionContext) extends MonadAsyncErr
   ): Future[B] = {
     val p = Promise[B]()
 
-    def tryRelease(a: A): Future[Unit] = Try(release(a)) match {
-      case Failure(exception) => Future.failed(exception)
-      case Success(value)     => value
-    }
-
-    def tryUse(a: A): Future[B] = Try(use(a)) match {
-      case Failure(exception) => Future.failed(exception)
-      case Success(value)     => value
-    }
-
-    acquire.onComplete {
+    suspend(acquire).onComplete {
       case Failure(exception) => p.failure(exception)
       case Success(resource) =>
-        tryUse(resource).onComplete {
-          case Failure(exception) => p.failure(exception)
-          case Success(result)    => tryRelease(resource).map(_ => result).onComplete(p.complete)
+        suspend(use(resource)).onComplete {
+          case Failure(exception) =>
+            suspend(release(resource)).flatMap(_ => raiseError(exception)).onComplete(p.complete)
+          case Success(result) => suspend(release(resource)).map(_ => result).onComplete(p.complete)
         }
     }
 

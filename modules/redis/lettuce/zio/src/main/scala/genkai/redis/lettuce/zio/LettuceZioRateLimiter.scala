@@ -1,7 +1,7 @@
 package genkai.redis.lettuce.zio
 
 import genkai.Strategy
-import genkai.effect.zio.ZioMonadError
+import genkai.effect.zio.ZioBlockingMonadError
 import genkai.redis.RedisStrategy
 import genkai.redis.lettuce.LettuceRateLimiter
 import io.lettuce.core.RedisClient
@@ -16,7 +16,7 @@ class LettuceZioRateLimiter private (
   closeClient: Boolean,
   acquireSha: String,
   permissionsSha: String,
-  monad: ZioMonadError
+  monad: ZioBlockingMonadError
 ) extends LettuceRateLimiter[Task](
       client,
       connection,
@@ -33,7 +33,7 @@ object LettuceZioRateLimiter {
     strategy: Strategy
   ): ZIO[Blocking, Throwable, LettuceZioRateLimiter] = for {
     blocker <- ZIO.service[Blocking.Service]
-    monad = new ZioMonadError(blocker)
+    monad = new ZioBlockingMonadError(blocker)
     redisStrategy = RedisStrategy(strategy)
     connection <- monad.eval(client.connect())
     command = connection.sync()
@@ -66,7 +66,7 @@ object LettuceZioRateLimiter {
     ZManaged.make {
       for {
         blocker <- ZIO.service[Blocking.Service]
-        monad = new ZioMonadError(blocker)
+        monad = new ZioBlockingMonadError(blocker)
         client <- monad.eval(RedisClient.create(redisUri))
         redisStrategy = RedisStrategy(strategy)
         connection <- monad.eval(client.connect())

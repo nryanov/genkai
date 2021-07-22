@@ -4,7 +4,7 @@ import com.aerospike.client.{AerospikeClient, Language}
 import com.aerospike.client.policy.ClientPolicy
 import genkai.Strategy
 import genkai.aerospike.{AerospikeRateLimiter, AerospikeStrategy}
-import genkai.effect.zio.ZioMonadError
+import genkai.effect.zio.ZioBlockingMonadError
 import zio.blocking.{Blocking, blocking}
 import zio.{Has, Task, ZIO, ZLayer, ZManaged}
 
@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 class AerospikeZioRateLimiter private (
   client: AerospikeClient,
   namespace: String,
-  monad: ZioMonadError,
+  monad: ZioBlockingMonadError,
   strategy: AerospikeStrategy,
   closeClient: Boolean
 ) extends AerospikeRateLimiter[Task](
@@ -33,7 +33,7 @@ object AerospikeZioRateLimiter {
     timeout: Duration = 10000 millis
   ): ZIO[Blocking, Throwable, AerospikeZioRateLimiter] = for {
     blocker <- ZIO.service[Blocking.Service]
-    monad = new ZioMonadError(blocker)
+    monad = new ZioBlockingMonadError(blocker)
     aerospikeStrategy = AerospikeStrategy(strategy)
     task <- monad.eval(
       client.registerUdfString(
@@ -81,7 +81,7 @@ object AerospikeZioRateLimiter {
     ZManaged.make {
       for {
         blocker <- ZIO.service[Blocking.Service]
-        monad = new ZioMonadError(blocker)
+        monad = new ZioBlockingMonadError(blocker)
         client <- monad.eval(new AerospikeClient(policy, host, port))
         aerospikeStrategy = AerospikeStrategy(strategy)
         task <- monad.eval(

@@ -5,13 +5,13 @@ import scala.util.{Failure, Success, Try}
 object EitherMonadError extends MonadError[Either[Throwable, *]] {
   override def pure[A](value: A): Either[Throwable, A] = Right(value)
 
-  override def map[A, B](fa: Either[Throwable, A])(f: A => B): Either[Throwable, B] = fa.map(f)
+  override def map[A, B](fa: => Either[Throwable, A])(f: A => B): Either[Throwable, B] = fa.map(f)
 
-  override def flatMap[A, B](fa: Either[Throwable, A])(
+  override def flatMap[A, B](fa: => Either[Throwable, A])(
     f: A => Either[Throwable, B]
   ): Either[Throwable, B] = fa.flatMap(f)
 
-  override def tap[A, B](fa: Either[Throwable, A])(
+  override def tap[A, B](fa: => Either[Throwable, A])(
     f: A => Either[Throwable, B]
   ): Either[Throwable, A] = fa.flatMap(r => f(r).map(_ => r))
 
@@ -50,7 +50,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
     }
 
   override def ifM[A](
-    fcond: Either[Throwable, Boolean]
+    fcond: => Either[Throwable, Boolean]
   )(ifTrue: => Either[Throwable, A], ifFalse: => Either[Throwable, A]): Either[Throwable, A] =
     fcond.flatMap { flag =>
       if (flag) ifTrue
@@ -61,7 +61,7 @@ object EitherMonadError extends MonadError[Either[Throwable, *]] {
     if (cond) f.map(_ => ())
     else unit
 
-  override def void[A](fa: Either[Throwable, A]): Either[Throwable, Unit] = fa.map(_ => ())
+  override def void[A](fa: => Either[Throwable, A]): Either[Throwable, Unit] = fa.map(_ => ())
 
   override def eval[A](f: => A): Either[Throwable, A] = Try(f).toEither
 
