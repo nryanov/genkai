@@ -5,7 +5,7 @@ import com.aerospike.client.policy.ClientPolicy
 import com.aerospike.client.{AerospikeClient, Language}
 import genkai.Strategy
 import genkai.monad.syntax._
-import genkai.effect.cats.CatsMonadError
+import genkai.effect.cats.CatsBlockingMonadError
 import genkai.aerospike.{AerospikeRateLimiter, AerospikeStrategy}
 
 import scala.concurrent.duration._
@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 class AerospikeCatsRateLimiter[F[_]: Sync: ContextShift] private (
   client: AerospikeClient,
   namespace: String,
-  monad: CatsMonadError[F],
+  monad: CatsBlockingMonadError[F],
   strategy: AerospikeStrategy,
   closeClient: Boolean
 ) extends AerospikeRateLimiter[F](
@@ -32,7 +32,7 @@ object AerospikeCatsRateLimiter {
     sleepInterval: Duration = 1000 millis,
     timeout: Duration = 10000 millis
   ): F[AerospikeCatsRateLimiter[F]] = {
-    implicit val monad: CatsMonadError[F] = new CatsMonadError[F](blocker)
+    implicit val monad: CatsBlockingMonadError[F] = new CatsBlockingMonadError[F](blocker)
 
     val aerospikeStrategy = AerospikeStrategy(strategy)
 
@@ -66,7 +66,7 @@ object AerospikeCatsRateLimiter {
     sleepInterval: Duration = 1000 millis,
     timeout: Duration = 10000 millis
   ): Resource[F, AerospikeCatsRateLimiter[F]] = {
-    implicit val monad: CatsMonadError[F] = new CatsMonadError[F](blocker)
+    implicit val monad: CatsBlockingMonadError[F] = new CatsBlockingMonadError[F](blocker)
 
     val aerospikeStrategy = AerospikeStrategy(strategy)
 

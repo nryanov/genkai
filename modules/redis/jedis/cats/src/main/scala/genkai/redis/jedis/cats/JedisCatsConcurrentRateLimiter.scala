@@ -3,7 +3,7 @@ package genkai.redis.jedis.cats
 import cats.effect.{Blocker, ContextShift, Resource, Sync}
 import genkai.ConcurrentStrategy
 import genkai.monad.syntax._
-import genkai.effect.cats.CatsMonadError
+import genkai.effect.cats.CatsBlockingMonadError
 import genkai.redis.RedisConcurrentStrategy
 import genkai.redis.jedis.JedisConcurrentRateLimiter
 import redis.clients.jedis.util.Pool
@@ -16,7 +16,7 @@ class JedisCatsConcurrentRateLimiter[F[_]: Sync: ContextShift] private (
   acquireSha: String,
   releaseSha: String,
   permissionsSha: String,
-  monad: CatsMonadError[F]
+  monad: CatsBlockingMonadError[F]
 ) extends JedisConcurrentRateLimiter[F](
       pool,
       monad,
@@ -33,7 +33,7 @@ object JedisCatsConcurrentRateLimiter {
     strategy: ConcurrentStrategy,
     blocker: Blocker
   ): F[JedisCatsConcurrentRateLimiter[F]] = {
-    implicit val monad: CatsMonadError[F] = new CatsMonadError[F](blocker)
+    implicit val monad: CatsBlockingMonadError[F] = new CatsBlockingMonadError[F](blocker)
 
     val redisStrategy = RedisConcurrentStrategy(strategy)
 
@@ -66,7 +66,7 @@ object JedisCatsConcurrentRateLimiter {
     strategy: ConcurrentStrategy,
     blocker: Blocker
   ): Resource[F, JedisCatsConcurrentRateLimiter[F]] = {
-    implicit val monad: CatsMonadError[F] = new CatsMonadError[F](blocker)
+    implicit val monad: CatsBlockingMonadError[F] = new CatsBlockingMonadError[F](blocker)
 
     val redisStrategy = RedisConcurrentStrategy(strategy)
 

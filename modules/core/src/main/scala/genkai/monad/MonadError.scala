@@ -7,11 +7,11 @@ trait MonadError[F[_]] {
 
   def pure[A](value: A): F[A]
 
-  def map[A, B](fa: F[A])(f: A => B): F[B]
+  def map[A, B](fa: => F[A])(f: A => B): F[B]
 
-  def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
+  def flatMap[A, B](fa: => F[A])(f: A => F[B]): F[B]
 
-  def tap[A, B](fa: F[A])(f: A => F[B]): F[A]
+  def tap[A, B](fa: => F[A])(f: A => F[B]): F[A]
 
   def raiseError[A](error: Throwable): F[A]
 
@@ -23,17 +23,17 @@ trait MonadError[F[_]] {
 
   def handleErrorWith[A](fa: => F[A])(pf: PartialFunction[Throwable, F[A]]): F[A]
 
-  def ifM[A](fcond: F[Boolean])(ifTrue: => F[A], ifFalse: => F[A]): F[A]
+  def ifM[A](fcond: => F[Boolean])(ifTrue: => F[A], ifFalse: => F[A]): F[A]
 
   def whenA[A](cond: Boolean)(f: => F[A]): F[Unit]
 
-  def void[A](fa: F[A]): F[Unit]
+  def void[A](fa: => F[A]): F[Unit]
 
   def eval[A](f: => A): F[A]
 
   def suspend[A](fa: => F[A]): F[A] = flatten(eval(fa))
 
-  def flatten[A](fa: F[F[A]]): F[A] = flatMap(fa)(v => identity(v))
+  def flatten[A](fa: => F[F[A]]): F[A] = flatMap(fa)(v => identity(v))
 
   def guarantee[A](f: => F[A])(g: => F[Unit]): F[A]
 
