@@ -1,6 +1,8 @@
 # genkai
 [![GitHub license](https://img.shields.io/github/license/nryanov/genkai)](https://github.com/nryanov/genkai/blob/master/LICENSE.txt)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.nryanov.genkai/genkai-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.nryanov.genkai/genkai-core_2.13)
+[![Codecov](https://img.shields.io/codecov/c/github/nryanov/genkai)](https://img.shields.io/codecov/c/github/nryanov/genkai)
+[![genkai CI](https://github.com/nryanov/genkai/actions/workflows/scala.yml/badge.svg?branch=master)](https://github.com/nryanov/genkai/actions/workflows/scala.yml)
 
 Genkai (*jp. 限界, limit*) is a small library which allows you to limit requests or function calls.
 
@@ -43,21 +45,27 @@ Class | Effect |
 `AerospikeZioRateLimiter` | `zio.Task`
 `JedisClusterSyncRateLimiter` | None (`Identity`)  
 `JedisClusterCatsRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`JedisClusterCats3RateLimiter` | `F[_]: cats.effect.Sync` 
 `JedisClusterZioRateLimiter` | `zio.Task` 
 `JedisSyncRateLimiter (sentinel/pool)` | None (`Identity`)  
 `JedisCatsRateLimiter (sentinel/pool)` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`JedisCats3RateLimiter (sentinel/pool)` | `F[_]: cats.effect.Sync` 
 `JedisZioRateLimiter (sentinel/pool)` | `zio.Task` 
 `LettuceSyncRateLimiter` | None (`Identity`)  
 `LettuceAsyncRateLimiter` | `scala.concurrent.Future` 
 `LettuceCatsRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
-`LettuceCatsAsyncRateLimiter` | `F[_]: cats.effect.Concurrent` 
+`LettuceCatsAsyncRateLimiter` | `F[_]: cats.effect.Concurrent`
+`LettuceCats3RateLimiter` | `F[_]: cats.effect.Sync` 
+`LettuceCats3AsyncRateLimiter` | `F[_]: cats.effect.Async` 
 `LettuceMonixAsyncRateLimiter` | `monix.eval.Task` 
 `LettuceZioRateLimiter` | `zio.Task` 
 `LettuceZioAsyncRateLimiter` | `zio.Task` 
 `RedissonSyncRateLimiter` | None (`Identity`)  
 `RedissonAsyncRateLimiter` | `scala.concurrent.Future` 
 `RedissonCatsRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
-`RedissonCatsAsyncRateLimiter` | `F[_]: cats.effect.Concurrent` 
+`RedissonCatsAsyncRateLimiter` | `F[_]: cats.effect.Concurrent`
+`RedissonCats3RateLimiter` | `F[_]: cats.effect.Sync` 
+`RedissonCats3AsyncRateLimiter` | `F[_]: cats.effect.Async` 
 `RedissonMonixAsyncRateLimiter` | `monix.eval.Task` 
 `RedissonZioRateLimiter` | `zio.Task` 
 `RedissonZioAsyncRateLimiter` | `zio.Task`   
@@ -70,21 +78,27 @@ Class | Effect |
 `EitherConcurrentRateLimiter` | `Either`
 `JedisClusterSyncConcurrentRateLimiter` | None (`Identity`)  
 `JedisClusterCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`JedisClusterCats3ConcurrentRateLimiter` | `F[_]: cats.effect.Sync` 
 `JedisClusterZioConcurrentRateLimiter` | `zio.Task` 
 `JedisSyncConcurrentRateLimiter (sentinel/pool)` | None (`Identity`)  
 `JedisCatsConcurrentRateLimiter (sentinel/pool)` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
+`JedisCats3ConcurrentRateLimiter (sentinel/pool)` | `F[_]: cats.effect.Sync` 
 `JedisZioConcurrentRateLimiter (sentinel/pool)` | `zio.Task` 
 `LettuceSyncConcurrentRateLimiter` | None (`Identity`)  
 `LettuceAsyncConcurrentRateLimiter` | `scala.concurrent.Future` 
 `LettuceCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
-`LettuceCatsAsyncConcurrentRateLimiter` | `F[_]: cats.effect.Concurrent` 
+`LettuceCatsAsyncConcurrentRateLimiter` | `F[_]: cats.effect.Concurrent`
+`LettuceCats3ConcurrentRateLimiter` | `F[_]: cats.effect.Sync` 
+`LettuceCats3AsyncConcurrentRateLimiter` | `F[_]: cats.effect.Async` 
 `LettuceMonixAsyncConcurrentRateLimiter` | `monix.eval.Task` 
 `LettuceZioConcurrentRateLimiter` | `zio.Task` 
 `LettuceZioAsyncConcurrentRateLimiter` | `zio.Task` 
 `RedissonSyncConcurrentRateLimiter` | None (`Identity`)  
 `RedissonAsyncConcurrentRateLimiter` | `scala.concurrent.Future` 
 `RedissonCatsConcurrentRateLimiter` | `F[_]: cats.effect.Sync: cats.effect.ContextShift` 
-`RedissonCatsAsyncConcurrentRateLimiter` | `F[_]: cats.effect.Concurrent` 
+`RedissonCatsAsyncConcurrentRateLimiter` | `F[_]: cats.effect.Concurrent`
+`RedissonCats3ConcurrentRateLimiter` | `F[_]: cats.effect.Sync` 
+`RedissonCats3AsyncConcurrentRateLimiter` | `F[_]: cats.effect.Async` 
 `RedissonMonixAsyncConcurrentRateLimiter` | `monix.eval.Task` 
 `RedissonZioConcurrentRateLimiter` | `zio.Task` 
 `RedissonZioAsyncConcurrentRateLimiter` | `zio.Task`   

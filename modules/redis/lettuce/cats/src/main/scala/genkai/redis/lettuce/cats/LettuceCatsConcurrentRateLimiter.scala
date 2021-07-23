@@ -3,7 +3,7 @@ package genkai.redis.lettuce.cats
 import cats.effect.{Blocker, ContextShift, Resource, Sync}
 import genkai.ConcurrentStrategy
 import genkai.monad.syntax._
-import genkai.effect.cats.CatsMonadError
+import genkai.effect.cats.CatsBlockingMonadError
 import genkai.redis.RedisConcurrentStrategy
 import genkai.redis.lettuce.LettuceConcurrentRateLimiter
 import io.lettuce.core.RedisClient
@@ -17,7 +17,7 @@ class LettuceCatsConcurrentRateLimiter[F[_]: Sync: ContextShift] private (
   acquireSha: String,
   releaseSha: String,
   permissionsSha: String,
-  monad: CatsMonadError[F]
+  monad: CatsBlockingMonadError[F]
 ) extends LettuceConcurrentRateLimiter[F](
       client = client,
       connection = connection,
@@ -35,7 +35,7 @@ object LettuceCatsConcurrentRateLimiter {
     strategy: ConcurrentStrategy,
     blocker: Blocker
   ): F[LettuceCatsConcurrentRateLimiter[F]] = {
-    implicit val monad: CatsMonadError[F] = new CatsMonadError[F](blocker)
+    implicit val monad: CatsBlockingMonadError[F] = new CatsBlockingMonadError[F](blocker)
 
     val redisStrategy = RedisConcurrentStrategy(strategy)
 
@@ -66,7 +66,7 @@ object LettuceCatsConcurrentRateLimiter {
     strategy: ConcurrentStrategy,
     blocker: Blocker
   ): Resource[F, LettuceCatsConcurrentRateLimiter[F]] = {
-    implicit val monad: CatsMonadError[F] = new CatsMonadError[F](blocker)
+    implicit val monad: CatsBlockingMonadError[F] = new CatsBlockingMonadError[F](blocker)
 
     val redisStrategy = RedisConcurrentStrategy(strategy)
 

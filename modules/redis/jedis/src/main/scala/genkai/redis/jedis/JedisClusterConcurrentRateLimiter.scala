@@ -6,7 +6,7 @@ import redis.clients.jedis.JedisCluster
 import genkai.monad.syntax._
 import genkai.monad.MonadError
 import genkai.redis.RedisConcurrentStrategy
-import genkai.{ConcurrentLimitExhausted, ConcurrentRateLimiter, Key, Logging}
+import genkai.{ConcurrentLimitExhausted, ConcurrentRateLimiter, Key}
 
 abstract class JedisClusterConcurrentRateLimiter[F[_]](
   cluster: JedisCluster,
@@ -16,21 +16,23 @@ abstract class JedisClusterConcurrentRateLimiter[F[_]](
   acquireSha: String,
   releaseSha: String,
   permissionsSha: String
-) extends ConcurrentRateLimiter[F]
-    with Logging[F] {
+) extends ConcurrentRateLimiter[F] {
 
   override private[genkai] def use[A: Key, B](key: A, instant: Instant)(
     f: => F[B]
   ): F[Either[ConcurrentLimitExhausted[A], B]] =
-    monad.ifM(acquire(key, instant))(
-      ifTrue = monad.guarantee(f)(release(key, instant).void).map(r => Right(r)),
-      ifFalse = monad.pure(Left(ConcurrentLimitExhausted(key)))
-    )
+    monad.bracket(acquire(key, instant)) { acquired =>
+      monad.ifM(monad.pure(acquired))(
+        ifTrue = monad.suspend(f).map[Either[ConcurrentLimitExhausted[A], B]](r => Right(r)),
+        ifFalse =
+          monad.pure[Either[ConcurrentLimitExhausted[A], B]](Left(ConcurrentLimitExhausted(key)))
+      )
+    }(acquired => monad.whenA(acquired)(release(key, instant).void))
 
   override def reset[A: Key](key: A): F[Unit] = {
     val now = Instant.now()
     val keyStr = strategy.keys(key, now)
-    debug(s"Reset limits for: $keyStr").flatMap(_ => monad.eval(cluster.unlink(keyStr: _*)))
+    monad.eval(cluster.unlink(keyStr: _*))
   }
 
   override private[genkai] def acquire[A: Key](key: A, instant: Instant): F[Boolean] = {
@@ -38,7 +40,6 @@ abstract class JedisClusterConcurrentRateLimiter[F[_]](
     val args = keys ::: strategy.acquireArgs(instant)
 
     for {
-      _ <- debug(s"Acquire request: $args")
       tokens <- monad.eval(cluster.evalsha(acquireSha, keys.size, args: _*))
     } yield strategy.isAllowed(tokens.toString.toLong)
   }
@@ -48,7 +49,6 @@ abstract class JedisClusterConcurrentRateLimiter[F[_]](
     val args = keys ::: strategy.releaseArgs(instant)
 
     for {
-      _ <- debug(s"Release request: $args")
       tokens <- monad.eval(cluster.evalsha(releaseSha, keys.size, args: _*))
     } yield strategy.isReleased(tokens.toString.toLong)
   }
@@ -58,7 +58,6 @@ abstract class JedisClusterConcurrentRateLimiter[F[_]](
     val args = keys ::: strategy.permissionsArgs(instant)
 
     for {
-      _ <- debug(s"Permissions request: $args")
       tokens <- monad.eval(cluster.evalsha(permissionsSha, keys.size, args: _*))
     } yield strategy.toPermissions(tokens.toString.toLong)
   }
