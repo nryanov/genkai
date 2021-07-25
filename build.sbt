@@ -5,8 +5,8 @@ lazy val jedisVersion = "3.6.3"
 lazy val redissonVersion = "3.16.0"
 lazy val aerospikeClientVersion = "5.1.5.1"
 // effects
-lazy val catsVersion = "2.5.1"
-lazy val cats3Version = "3.1.1"
+lazy val cats2Version = "2.5.1"
+lazy val catsVersion = "3.1.1"
 lazy val zioVersion = "1.0.9"
 lazy val monixVersion = "3.4.0"
 // test
@@ -16,6 +16,7 @@ lazy val logbackVersion = "1.2.3"
 
 val scala2_12 = "2.12.13"
 val scala2_13 = "2.13.5"
+val scala3 = "3.0.1"
 
 val compileAndTest = "compile->compile;test->test"
 
@@ -35,7 +36,7 @@ lazy val buildSettings = Seq(
     )
   ),
   scalaVersion := scala2_13,
-  crossScalaVersions := Seq(scala2_12, scala2_13)
+  crossScalaVersions := Seq(scala2_12, scala2_13, scala3)
 )
 
 lazy val noPublish = Seq(
@@ -46,18 +47,22 @@ lazy val noPublish = Seq(
 
 def compilerOptions(scalaVersion: String) = Seq(
   "-deprecation",
+  "-unchecked",
   "-encoding",
   "UTF-8",
+  "-explaintypes",
   "-feature",
   "-language:existentials",
   "-language:higherKinds",
   "-language:implicitConversions",
-  "-unchecked",
-  "-Ywarn-dead-code",
-  "-Ywarn-numeric-widen",
-  "-Xlint",
   "-language:existentials",
-  "-language:postfixOps"
+  "-language:postfixOps",
+  "-Ywarn-dead-code",
+  "-Xlint",
+  "-Xlint:constant",
+  "-Xlint:inaccessible",
+  "-Xlint:nullary-unit",
+  "-Xlint:type-parameter-shadow"
 ) ++ (CrossVersion.partialVersion(scalaVersion) match {
   case Some((2, scalaMajor)) if scalaMajor == 12 => scala212CompilerOptions
   case Some((2, scalaMajor)) if scalaMajor == 13 => scala213CompilerOptions
@@ -65,12 +70,40 @@ def compilerOptions(scalaVersion: String) = Seq(
 
 lazy val scala212CompilerOptions = Seq(
   "-Yno-adapted-args",
-  "-Ywarn-unused-import",
-  "-Xfuture"
+  "-Xfuture",
+  "-Ypartial-unification",
+  "-Ywarn-dead-code",
+  "-Ywarn-numeric-widen",
+  "-Ywarn-unused:implicits",
+  "-Ywarn-unused:imports",
+  "-Ywarn-unused:locals",
+  "-Ywarn-unused:params",
+  "-Ywarn-unused:patvars",
+  "-Ywarn-unused:privates",
+  "-Ywarn-value-discard",
+  "-Xlint:unsound-match"
 )
 
 lazy val scala213CompilerOptions = Seq(
-  "-Wunused:imports"
+  "-Xlint:_,-byname-implicit",
+  "-Ymacro-annotations",
+  "-Wdead-code",
+  "-Wnumeric-widen",
+  "-Wunused:explicits",
+  "-Wunused:implicits",
+  "-Wunused:imports",
+  "-Wunused:locals",
+  "-Wunused:patvars",
+  "-Wunused:privates",
+  "-Wvalue-discard",
+  "-Xlint:deprecation",
+  "-Xlint:eta-sam",
+  "-Xlint:eta-zero",
+  "-Xlint:implicit-not-found",
+  "-Xlint:infer-any",
+  "-Xlint:nonlocal-return",
+  "-Xlint:unused",
+  "-Xlint:valpattern"
 )
 
 lazy val allSettings = commonSettings ++ buildSettings
@@ -134,7 +167,7 @@ lazy val cats = project
   .settings(moduleName := "genkai-cats")
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % catsVersion
+      "org.typelevel" %% "cats-effect" % cats2Version
     )
   )
   .dependsOn(core % compileAndTest)
@@ -145,7 +178,7 @@ lazy val cats3 = project
   .settings(moduleName := "genkai-cats3")
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % cats3Version
+      "org.typelevel" %% "cats-effect" % catsVersion
     )
   )
   .dependsOn(core % compileAndTest)
