@@ -3,7 +3,7 @@ lazy val kindProjectorVersion = "0.13.0"
 lazy val lettuceVersion = "6.1.4.RELEASE"
 lazy val jedisVersion = "3.6.3"
 lazy val redissonVersion = "3.16.0"
-lazy val aerospikeClientVersion = "5.1.5"
+lazy val aerospikeClientVersion = "5.1.5.1"
 // effects
 lazy val catsVersion = "2.5.1"
 lazy val cats3Version = "3.1.1"
