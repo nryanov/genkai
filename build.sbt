@@ -5,8 +5,8 @@ lazy val jedisVersion = "3.6.3"
 lazy val redissonVersion = "3.16.1"
 lazy val aerospikeClientVersion = "5.1.5.1"
 // effects
-lazy val catsVersion = "2.5.1"
-lazy val cats3Version = "3.1.1"
+lazy val cats2Version = "2.5.1"
+lazy val catsVersion = "3.1.1"
 lazy val zioVersion = "1.0.9"
 lazy val monixVersion = "3.4.0"
 // test
@@ -134,7 +134,7 @@ lazy val cats = project
   .settings(moduleName := "genkai-cats")
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % catsVersion
+      "org.typelevel" %% "cats-effect" % cats2Version
     )
   )
   .dependsOn(core % compileAndTest)
@@ -145,7 +145,7 @@ lazy val cats3 = project
   .settings(moduleName := "genkai-cats3")
   .settings(
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % cats3Version
+      "org.typelevel" %% "cats-effect" % catsVersion
     )
   )
   .dependsOn(core % compileAndTest)
