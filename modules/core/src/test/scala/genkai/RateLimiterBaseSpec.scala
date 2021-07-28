@@ -2,6 +2,7 @@ package genkai
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
 
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.funsuite.AsyncFunSuite
@@ -97,9 +98,69 @@ trait RateLimiterBaseSpec[F[_]]
     for {
       r1 <- toFuture(limiter.acquire("key"))
       r2 <- toFuture(limiter.permissions("key"))
+      r3 <- toFuture(limiter.acquire("key"))
+      r4 <- toFuture(limiter.permissions("key"))
     } yield {
       r1 shouldBe true
       r2 shouldBe 9L
+      r3 shouldBe true
+      r4 shouldBe 8L
+    }
+  }
+
+  for (
+    strategy <- Seq(
+      Strategy.TokenBucket(10, 1, 1.hour),
+      Strategy.FixedWindow(10, Window.Hour),
+      Strategy.SlidingWindow(10, Window.Hour)
+    )
+  ) yield test(s"should acquire (return state) single token: $strategy") {
+    val limiter = rateLimiter(strategy)
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS) // start of the day for consistency
+
+    val (resetFirst, resetSecond) = strategy match {
+      case Strategy.TokenBucket(_, _, refillDelay) =>
+        (
+          instant.getEpochSecond + refillDelay.toSeconds,
+          instant.getEpochSecond + refillDelay.toSeconds
+        )
+      case Strategy.FixedWindow(_, window) =>
+        (instant.getEpochSecond + window.size, instant.getEpochSecond + window.size)
+      case Strategy.SlidingWindow(_, window) =>
+        (
+          instant.getEpochSecond + window.size,
+          // window slide
+          instant.plus(30, ChronoUnit.MINUTES).getEpochSecond + window.size
+        )
+    }
+
+    val expectedState = RateLimiter.State(
+      limit = 10L,
+      remaining = 9L,
+      isAllowed = true,
+      reset = resetFirst,
+      resetAfter = resetFirst - instant.getEpochSecond,
+      key = "key"
+    )
+
+    val secondExpectedState = expectedState.copy(
+      remaining = 8L,
+      reset = resetSecond,
+      resetAfter = resetSecond - instant.plus(30, ChronoUnit.MINUTES).getEpochSecond
+    )
+
+    for {
+      state <- toFuture(limiter.acquireS("key", instant))
+      permissions <- toFuture(limiter.permissions("key", instant))
+      secondState <- toFuture(limiter.acquireS("key", instant.plus(30, ChronoUnit.MINUTES)))
+      secondPermissions <- toFuture(
+        limiter.permissions("key", instant.plus(30, ChronoUnit.MINUTES))
+      )
+    } yield {
+      state shouldBe expectedState
+      permissions shouldBe 9L
+      secondState shouldBe secondExpectedState
+      secondPermissions shouldBe 8L
     }
   }
 
