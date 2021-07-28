@@ -32,13 +32,20 @@ abstract class JedisClusterRateLimiter[F[_]](
     monad.eval(cluster.unlink(keyStr: _*))
   }
 
-  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
+  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
+    acquireS(key, instant, cost).map(_.isAllowed)
+
+  override private[genkai] def acquireS[A: Key](
+    key: A,
+    instant: Instant,
+    cost: Long
+  ): F[RateLimiter.State] = {
     val keys = strategy.keys(key, instant)
     val args = keys ::: strategy.acquireArgs(instant, cost)
 
     for {
       tokens <- monad.eval(cluster.evalsha(acquireSha, keys.size, args: _*))
-    } yield strategy.isAllowed(tokens.toString.toLong)
+    } yield strategy.toState(tokens, instant, Key[A].convert(key))
   }
 
   override def close(): F[Unit] =

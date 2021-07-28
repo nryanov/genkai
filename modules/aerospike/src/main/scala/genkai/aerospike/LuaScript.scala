@@ -191,14 +191,14 @@ object LuaScript {
       |  
       |  -- attempt to write in the past
       |  if oldestBlock > currentBlock then
-      |    prepareResponse(r, response, maxTokens, 0)
+      |    prepareResponse(r, response, instant, maxTokens, 0)
       |    return response
       |  end
       |  
       |  cleanup(r, trimBefore, oldestBlock, blocks)
       |  
       |  if r[usedTokensBin] + cost > maxTokens then
-      |    prepareResponse(r, response, maxTokens, 0)
+      |    prepareResponse(r, response, instant, maxTokens, 0)
       |    return response
       |  end
       |  

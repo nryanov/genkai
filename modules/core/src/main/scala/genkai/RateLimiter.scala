@@ -80,7 +80,7 @@ trait RateLimiter[F[_]] {
    * @tparam A - key type with implicit [[genkai.Key]] type class instance
    * @return
    */
-  private[genkai] def acquire[A: Key](key: A, instant: Instant): F[Boolean] =
+  private[genkai] final def acquire[A: Key](key: A, instant: Instant): F[Boolean] =
     acquire(key, instant, cost = 1)
 
   /**
