@@ -69,7 +69,7 @@ abstract class LettuceAsyncRateLimiter[F[_]](
         val cf = asyncCommands
           .evalsha[Long](
             acquireSha,
-            ScriptOutputType.INTEGER,
+            ScriptOutputType.MULTI,
             keyStr.toArray,
             args: _*
           )

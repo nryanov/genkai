@@ -52,7 +52,7 @@ abstract class LettuceRateLimiter[F[_]](
       .eval(
         syncCommands.evalsha[Any](
           acquireSha,
-          ScriptOutputType.INTEGER,
+          ScriptOutputType.MULTI,
           keyStr.toArray,
           args: _*
         )
