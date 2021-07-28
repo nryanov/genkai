@@ -41,7 +41,8 @@ trait RateLimiter[F[_]] {
    * @tparam A - key type with implicit [[genkai.Key]] type class instance
    * @return - true if token was acquired, false - otherwise
    */
-  private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean]
+  private[genkai] final def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
+    monadError.map(acquireS(key, instant, cost))(_.isAllowed)
 
   /**
    * Try to acquire token. Returns immediately.
@@ -52,9 +53,7 @@ trait RateLimiter[F[_]] {
    * @tparam A - key type with implicit [[genkai.Key]] type class instance
    * @return - true if token was acquired, false - otherwise
    */
-  private[genkai] def acquireS[A: Key](key: A, instant: Instant, cost: Long): F[RateLimiter.State] =
-    // fixme: temporary solution
-    monadError.raiseError(new RuntimeException("not implemented"))
+  private[genkai] def acquireS[A: Key](key: A, instant: Instant, cost: Long): F[RateLimiter.State]
 
   /**
    * Try to acquire token. Returns immediately.

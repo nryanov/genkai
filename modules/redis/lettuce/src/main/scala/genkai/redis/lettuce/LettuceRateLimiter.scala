@@ -44,20 +44,20 @@ abstract class LettuceRateLimiter[F[_]](
 
   }
 
-  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
+  override def acquireS[A: Key](key: A, instant: Instant, cost: Long): F[RateLimiter.State] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant, cost)
 
     monad
       .eval(
-        syncCommands.evalsha[Long](
+        syncCommands.evalsha[Any](
           acquireSha,
           ScriptOutputType.INTEGER,
           keyStr.toArray,
           args: _*
         )
       )
-      .map(tokens => strategy.isAllowed(tokens))
+      .map(tokens => strategy.toState(tokens, instant, Key[A].convert(key)))
   }
 
   override def close(): F[Unit] =

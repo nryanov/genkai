@@ -43,7 +43,7 @@ abstract class RedissonRateLimiter[F[_]](
     monad.eval(client.getKeys.unlink(keyStr: _*)).void
   }
 
-  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
+  override def acquireS[A: Key](key: A, instant: Instant, cost: Long): F[RateLimiter.State] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant, cost)
 
@@ -55,7 +55,7 @@ abstract class RedissonRateLimiter[F[_]](
           args
         )
       )
-      .map(strategy.isAllowed)
+      .map(strategy.toState(_, instant, Key[A].convert(key)))
   }
 
   override def close(): F[Unit] =

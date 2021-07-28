@@ -62,26 +62,30 @@ abstract class RedissonAsyncRateLimiter[F[_]](
       .void
   }
 
-  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
+  override private[genkai] def acquireS[A: Key](
+    key: A,
+    instant: Instant,
+    cost: Long
+  ): F[RateLimiter.State] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant, cost)
 
     monad
-      .cancelable[Long] { cb =>
+      .cancelable[Any] { cb =>
         val cf = evalShaAsync(
           acquireSha,
           new java.util.LinkedList[Object](keyStr.asJava),
           args
         )
 
-        cf.onComplete { (res: Long, err: Throwable) =>
+        cf.onComplete { (res: Any, err: Throwable) =>
           if (err != null) cb(Left(err))
           else cb(Right(res))
         }
 
         () => monad.eval(cf.cancel(true))
       }
-      .map(tokens => strategy.isAllowed(tokens))
+      .map(tokens => strategy.toState(tokens, instant, Key[A].convert(key)))
   }
 
   override def close(): F[Unit] = monad.ifM(monad.pure(closeClient))(

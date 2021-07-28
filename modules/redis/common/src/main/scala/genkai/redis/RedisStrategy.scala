@@ -51,7 +51,7 @@ sealed trait RedisStrategy {
    */
   def isAllowed(value: Long): Boolean
 
-  def toState(response: AnyRef, instant: Instant, key: String): RateLimiter.State
+  def toState(response: Any, instant: Instant, key: String): RateLimiter.State
 
   /**
    * @param value - returned value after [[genkai.RateLimiter.permissions()]]
@@ -91,7 +91,7 @@ object RedisStrategy {
 
     override def toPermissions(value: Long): Long = value
 
-    override def toState(response: AnyRef, instant: Instant, key: String): RateLimiter.State = {
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
       val state = response.asInstanceOf[java.util.ArrayList[Long]]
 
       val ts = state.get(0)
@@ -139,7 +139,7 @@ object RedisStrategy {
 
     override def toPermissions(value: Long): Long = value
 
-    override def toState(response: AnyRef, instant: Instant, key: String): RateLimiter.State = {
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
       val state = response.asInstanceOf[java.util.ArrayList[Long]]
 
       val ts = state.get(0)
@@ -196,7 +196,7 @@ object RedisStrategy {
 
     override def toPermissions(value: Long): Long = value
 
-    override def toState(response: AnyRef, instant: Instant, key: String): RateLimiter.State = {
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
       val state = response.asInstanceOf[java.util.ArrayList[Long]]
 
       val ts = state.get(0)

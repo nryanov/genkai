@@ -42,9 +42,6 @@ abstract class AerospikeRateLimiter[F[_]](
     monad.eval(client.delete(writePolicy, keyStr)).void
   }
 
-  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
-    acquireS(key, instant, cost).map(_.isAllowed)
-
   override private[genkai] def acquireS[A: Key](
     key: A,
     instant: Instant,

@@ -33,9 +33,6 @@ abstract class JedisRateLimiter[F[_]](
     useClient(client => monad.eval(client.unlink(keyStr: _*)))
   }
 
-  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
-    acquireS(key, instant, cost).map(_.isAllowed)
-
   override private[genkai] def acquireS[A: Key](
     key: A,
     instant: Instant,

@@ -70,7 +70,7 @@ sealed trait AerospikeStrategy {
    */
   def isAllowed(value: Long): Boolean
 
-  def toState(response: AnyRef, instant: Instant, key: String): RateLimiter.State
+  def toState(response: Any, instant: Instant, key: String): RateLimiter.State
 
   /**
    * @param value - returned value after [[genkai.RateLimiter.permissions()]]
@@ -122,7 +122,7 @@ object AerospikeStrategy {
 
     override def toPermissions(value: Long): Long = value
 
-    override def toState(response: AnyRef, instant: Instant, key: String): RateLimiter.State = {
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
       val state = response.asInstanceOf[java.util.HashMap[String, Long]]
 
       val ts = state.get("ts")
@@ -184,7 +184,7 @@ object AerospikeStrategy {
 
     override def toPermissions(value: Long): Long = value
 
-    override def toState(response: AnyRef, instant: Instant, key: String): RateLimiter.State = {
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
       val state = response.asInstanceOf[java.util.HashMap[String, Long]]
 
       val ts = state.get("ts")
@@ -244,7 +244,7 @@ object AerospikeStrategy {
 
     override def toPermissions(value: Long): Long = value
 
-    override def toState(response: AnyRef, instant: Instant, key: String): RateLimiter.State = {
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
       val state = response.asInstanceOf[java.util.HashMap[String, Long]]
 
       val ts = state.get("ts")
