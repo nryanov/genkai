@@ -72,7 +72,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
 
     monad
       .cancelable[Any] { cb =>
-        val cf = evalShaAsync(
+        val cf = evalShaMultiAsync(
           acquireSha,
           new java.util.LinkedList[Object](keyStr.asJava),
           args
@@ -101,6 +101,19 @@ abstract class RedissonAsyncRateLimiter[F[_]](
     args: Seq[String]
   ): RFuture[Long] =
     scriptCommand.evalShaAsync[Long](
+      RScript.Mode.READ_WRITE,
+      sha,
+      RScript.ReturnType.INTEGER,
+      keys,
+      args: _*
+    )
+
+  private def evalShaMultiAsync(
+    sha: String,
+    keys: java.util.List[Object],
+    args: Seq[String]
+  ): RFuture[Any] =
+    scriptCommand.evalShaAsync[Any](
       RScript.Mode.READ_WRITE,
       sha,
       RScript.ReturnType.MULTI,

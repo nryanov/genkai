@@ -49,7 +49,7 @@ abstract class RedissonRateLimiter[F[_]](
 
     monad
       .eval(
-        evalSha(
+        evalShaMulti(
           acquireSha,
           new java.util.LinkedList[Object](keyStr.asJava),
           args
@@ -68,6 +68,15 @@ abstract class RedissonRateLimiter[F[_]](
 
   private def evalSha(sha: String, keys: java.util.List[Object], args: Seq[String]): Long =
     scriptCommand.evalSha[Long](
+      RScript.Mode.READ_WRITE,
+      sha,
+      RScript.ReturnType.INTEGER,
+      keys,
+      args: _*
+    )
+
+  private def evalShaMulti(sha: String, keys: java.util.List[Object], args: Seq[String]): Any =
+    scriptCommand.evalSha[Any](
       RScript.Mode.READ_WRITE,
       sha,
       RScript.ReturnType.MULTI,
