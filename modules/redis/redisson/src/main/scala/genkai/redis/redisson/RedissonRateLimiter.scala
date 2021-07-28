@@ -70,7 +70,7 @@ abstract class RedissonRateLimiter[F[_]](
     scriptCommand.evalSha[Long](
       RScript.Mode.READ_WRITE,
       sha,
-      RScript.ReturnType.INTEGER,
+      RScript.ReturnType.MULTI,
       keys,
       args: _*
     )

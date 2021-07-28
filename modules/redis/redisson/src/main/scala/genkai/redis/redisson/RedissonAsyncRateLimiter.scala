@@ -103,7 +103,7 @@ abstract class RedissonAsyncRateLimiter[F[_]](
     scriptCommand.evalShaAsync[Long](
       RScript.Mode.READ_WRITE,
       sha,
-      RScript.ReturnType.INTEGER,
+      RScript.ReturnType.MULTI,
       keys,
       args: _*
     )
