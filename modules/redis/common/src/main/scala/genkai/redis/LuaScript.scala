@@ -182,17 +182,18 @@ object LuaScript {
       |local trimBefore = currentBlock - blocks + 1
       |local usedTokensKey = 'ut'
       |local oldestBlockKey = 'ob'
+      |local hw = 'hw'
       |
       |local oldestBlock = redis.call('HGET', key, oldestBlockKey)
       |oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
       |if oldestBlock > currentBlock then
-      |  local used = redis.call('HGET', key, usedTokensKey)
-      |  return {instant, used and tonumber(used) or 0, 0}
+      |  local used = tonumber(redis.call('HGET', key, usedTokensKey)) or 0
+      |  local oldestTs = tonumber(redis.call('HGET', key, hw)) or 0
+      |  return {oldestTs, maxTokens - used, 0}
       |end
       |
       |local decrement = 0
       |local deletion = {}
-      |local deletionTs = {}
       |local trim = math.min(trimBefore, oldestBlock + blocks)
       |
       |for oldBlock = oldestBlock, trim - 1 do
@@ -201,32 +202,29 @@ object LuaScript {
       |  if bCount then
       |    decrement = decrement + tonumber(bCount)
       |    table.insert(deletion, bKey)
-      |    table.insert(deletionTs, bKey .. 'ts')
       |  end
       |end
       |
       |local used = 0
       |if #deletion > 0 then
       |  redis.call('HDEL', key, unpack(deletion))
-      |  redis.call('HDEL', key, unpack(deletionTs))
       |  used = tonumber(redis.call('HINCRBY', key, usedTokensKey, -decrement))
       |else
       |  used = tonumber(redis.call('HGET', key, usedTokensKey) or '0')
       |end
       |
       |if used + cost > maxTokens then
-      |  return {redis.call('HGET', key, oldestBlockKey .. 'ts') or instant, used, 0}
+      |  return {tonumber(redis.call('HGET', key, hw)) or 0, maxTokens - used, 0}
       |end
       |
       |redis.call('HSET', key, oldestBlockKey, trimBefore)
+      |redis.call('HSET', key, hw, instant)
       |redis.call('HINCRBY', key, usedTokensKey, cost)
       |redis.call('HINCRBY', key, usedTokensKey .. currentBlock, cost)
-      |redis.call('HSET', key, currentBlock .. 'ts', instant)
       |
       |redis.call('EXPIRE', key, ttl)
       |
-      |local oldestTs = tonumber(redis.call('HGET', key, oldestBlockKey .. 'ts')) or instant
-      |return {oldestTs, maxTokens - used - cost, 1}
+      |return {instant, maxTokens - used - cost, 1}
       |""".stripMargin
 
   /**

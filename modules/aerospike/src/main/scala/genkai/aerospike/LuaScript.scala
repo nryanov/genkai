@@ -143,7 +143,7 @@ object LuaScript {
     """
       |local usedTokensBin = 'ut'
       |local oldestBlockBin = 'ob' 
-      |local blockTs = 'ts'
+      |local hw = 'hw'
       |
       |local function cleanup(r, trimBefore, oldestBlock, blocks)
       |  local decrement = 0
@@ -154,7 +154,6 @@ object LuaScript {
       |    if blockCount then
       |      decrement = decrement + tonumber(blockCount)
       |      r[block] = nil
-      |      r[block .. blockTs] = nil
       |    end
       |  end
       |  
@@ -172,7 +171,7 @@ object LuaScript {
       |end
       |
       |local function prepareResponse(r, response, instant, maxTokens, isAllowed)
-      |  response.ts = r[oldestBlockBin .. blockTs] or instant
+      |  response.ts = r[hw] or instant
       |  response.remaining = maxTokens - r[usedTokensBin]
       |  response.isAllowed = isAllowed
       |end
@@ -204,7 +203,7 @@ object LuaScript {
       |  
       |  r[usedTokensBin] = r[usedTokensBin] + cost
       |  r[currentBlock] = tonumber(r[currentBlock] or 0) + cost
-      |  r[currentBlock .. blockTs] = instant
+      |  r[hw] = instant
       |  
       |  prepareResponse(r, response, instant, maxTokens, 1)
       |  

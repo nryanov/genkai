@@ -43,7 +43,7 @@ trait RateLimiterBaseSpec[F[_]]
     )
   ) yield test(s"should return 0 permissions for request in the past: $strategy") {
     val limiter = rateLimiter(strategy)
-    val instant = Instant.now()
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
     for {
       _ <- toFuture(limiter.acquire("key", instant))
@@ -58,7 +58,7 @@ trait RateLimiterBaseSpec[F[_]]
     )
   ) yield test(s"should return max permissions for request in the next window: $strategy") {
     val limiter = rateLimiter(strategy)
-    val instant = Instant.now()
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
     for {
       _ <- toFuture(limiter.acquire("key", instant))
@@ -73,7 +73,7 @@ trait RateLimiterBaseSpec[F[_]]
     )
   ) yield test(s"should not acquire token if current timestamp is in the past: $strategy") {
     val limiter = rateLimiter(strategy)
-    val instant = Instant.now()
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
     for {
       acquire <- toFuture(limiter.acquire("key"))
@@ -250,7 +250,7 @@ trait RateLimiterBaseSpec[F[_]]
     s"[FixedWindow][${window.unit.toString}] should correctly starts next window with fresh tokens"
   ) {
     val limiter = rateLimiter(Strategy.FixedWindow(10, window))
-    val instant = Instant.now()
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
     val chronoUnit = window match {
       case Window.Second => ChronoUnit.SECONDS
@@ -283,7 +283,7 @@ trait RateLimiterBaseSpec[F[_]]
     s"[SlidingWindow][${window.unit.toString}] should clean up old buckets and correctly count used tokens"
   ) {
     val limiter = rateLimiter(Strategy.SlidingWindow(10, window))
-    val instant = Instant.now()
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
     val (chronoUnit, firstStep, secondStep, thirdStep) = window match {
       case Window.Second => (ChronoUnit.SECONDS, 1, 1, 1) // not used
@@ -309,11 +309,11 @@ trait RateLimiterBaseSpec[F[_]]
 
   test("[SlidingWindow] should not add extra acquiring if limit is reached") {
     val limiter = rateLimiter(Strategy.SlidingWindow(1, Window.Minute))
-    val instant = Instant.now()
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
     for {
       r1 <- toFuture(limiter.acquire("key", instant))
-      r2 <- toFuture(limiter.permissions("key"))
+      r2 <- toFuture(limiter.permissions("key", instant))
       r3 <- toFuture(limiter.acquire("key", instant))
       r4 <- toFuture(limiter.acquire("key", instant.plusSeconds(61)))
     } yield {
@@ -327,17 +327,17 @@ trait RateLimiterBaseSpec[F[_]]
   test("[TokenBucket] should refresh tokens after delay") {
     val limiter = rateLimiter(Strategy.TokenBucket(3, 1, 10 seconds))
 
-    val instant = Instant.now()
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
     for {
       r1 <- toFuture(limiter.acquire("key", instant))
       r2 <- toFuture(limiter.acquire("key", instant.plusSeconds(1)))
       r3 <- toFuture(limiter.acquire("key", instant.plusSeconds(2)))
       r4 <- toFuture(limiter.acquire("key", instant.plusSeconds(3)))
-      r5 <- toFuture(limiter.permissions("key"))
+      r5 <- toFuture(limiter.permissions("key", instant.plusSeconds(3)))
       // should refresh bucket and return maxToken - 1
       r6 <- toFuture(limiter.acquire("key", instant.plusSeconds(30)))
-      r7 <- toFuture(limiter.permissions("key"))
+      r7 <- toFuture(limiter.permissions("key", instant.plusSeconds(30)))
     } yield {
       r1 shouldBe true
       r2 shouldBe true
@@ -347,5 +347,126 @@ trait RateLimiterBaseSpec[F[_]]
       r6 shouldBe true
       r7 shouldBe 2L
     }
+  }
+
+  test(
+    s"[SlidingWindow] should not acquire token if request come from the past and return correct state"
+  ) {
+    val limiter = rateLimiter(Strategy.SlidingWindow(10, Window.Hour))
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
+
+    val expectedState = RateLimiter.State(
+      limit = 10,
+      remaining = 9,
+      isAllowed = true,
+      reset = instant.plus(1, ChronoUnit.HOURS).getEpochSecond,
+      resetAfter = 3600,
+      key = "key"
+    )
+
+    for {
+      state1 <- toFuture(limiter.acquireS("key", instant))
+      state2 <- toFuture(limiter.acquireS("key", instant.minus(2, ChronoUnit.HOURS)))
+    } yield {
+      state1 shouldBe expectedState
+      state2 shouldBe expectedState.copy(
+        // instant -- is the lowest correct timestamp
+        // reset = instant + 1 hour
+        // reset after -- is relative to passed timestamp which is (instant - 2 hours) =>
+        // resetAfter = (instant + 1 hour) - (instant - 2 hours)
+        resetAfter = instant
+          .plus(1, ChronoUnit.HOURS)
+          .getEpochSecond - instant.minus(2, ChronoUnit.HOURS).getEpochSecond,
+        isAllowed = false
+      )
+    }
+  }
+
+  test(
+    s"[FixedWindow] should not acquire token if request come from the past and return correct state"
+  ) {
+    val limiter = rateLimiter(Strategy.FixedWindow(10, Window.Hour))
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
+
+    val expectedState = RateLimiter.State(
+      limit = 10,
+      remaining = 9,
+      isAllowed = true,
+      reset = instant.plus(1, ChronoUnit.HOURS).getEpochSecond,
+      resetAfter = 3600,
+      key = "key"
+    )
+
+    for {
+      state1 <- toFuture(limiter.acquireS("key", instant))
+      state2 <- toFuture(limiter.acquireS("key", instant.minus(2, ChronoUnit.HOURS)))
+    } yield {
+      state1 shouldBe expectedState
+      state2 shouldBe expectedState.copy(
+        reset = instant.plus(1, ChronoUnit.HOURS).getEpochSecond,
+        resetAfter = instant
+          .plus(1, ChronoUnit.HOURS)
+          .getEpochSecond - instant.minus(2, ChronoUnit.HOURS).getEpochSecond,
+        isAllowed = false
+      )
+    }
+  }
+
+  test("[TokenBucket] should return correct remaining count if cost > limit") {
+    val limiter = rateLimiter(Strategy.TokenBucket(1, 1, 1.hour))
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
+
+    val expectedState = RateLimiter.State(
+      limit = 1,
+      remaining = 1,
+      isAllowed = false,
+      reset = instant.plus(1, ChronoUnit.HOURS).getEpochSecond,
+      resetAfter = 3600,
+      key = "key"
+    )
+
+    for {
+      state <- toFuture(limiter.acquireS("key", instant, 2))
+    } yield state shouldBe expectedState
+  }
+
+  test(
+    s"[SlidingWindow] should return correct remaining count if cost > limit"
+  ) {
+    val limiter = rateLimiter(Strategy.SlidingWindow(1, Window.Hour))
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
+
+    val expectedState = RateLimiter.State(
+      limit = 1,
+      remaining = 1,
+      isAllowed = false,
+      reset = instant.plus(1, ChronoUnit.HOURS).getEpochSecond,
+      resetAfter = 3600,
+      key = "key"
+    )
+
+    for {
+      state <- toFuture(limiter.acquireS("key", instant, 2))
+    } yield state shouldBe expectedState
+  }
+
+  test(
+    s"[FixedWindow] should return correct remaining count if cost > limit"
+  ) {
+    val limiter = rateLimiter(Strategy.FixedWindow(1, Window.Hour))
+    val instant = Instant.now().truncatedTo(ChronoUnit.DAYS)
+
+    val expectedState = RateLimiter.State(
+      limit = 1,
+      remaining = 1,
+      isAllowed = false,
+      reset = instant.plus(1, ChronoUnit.HOURS).getEpochSecond,
+      resetAfter = 3600,
+      key = "key"
+    )
+
+    for {
+      state <- toFuture(limiter.acquireS("key", instant, 2))
+    } yield state shouldBe expectedState
   }
 }
