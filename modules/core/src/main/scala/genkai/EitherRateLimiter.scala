@@ -14,12 +14,12 @@ final class EitherRateLimiter(rateLimiter: RateLimiter[Id])
   override def reset[A: Key](key: A): Either[Throwable, Unit] =
     monadError.eval(rateLimiter.reset(key))
 
-  override private[genkai] def acquire[A: Key](
+  override private[genkai] def acquireS[A: Key](
     key: A,
     instant: Instant,
     cost: Long
-  ): Either[Throwable, Boolean] =
-    monadError.eval(rateLimiter.acquire(key, instant, cost))
+  ): Either[Throwable, RateLimiter.State] =
+    monadError.eval(rateLimiter.acquireS(key, instant, cost))
 
   override def close(): Either[Throwable, Unit] = monadError.eval(rateLimiter.close())
 

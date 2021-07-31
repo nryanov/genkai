@@ -126,6 +126,8 @@ object Main {
 }
 ```
 
+More examples can be found in the [examples](examples/) folder.
+
 
 Some methods of `RateLimiter[F[_]]` trait require implicit `Key` instance for your key object.
 ```scala

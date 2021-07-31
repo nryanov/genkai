@@ -28,19 +28,30 @@ object LuaScript {
       |  end
       |end
       |
+      |local function prepareResponse(r, response, instant, remaining, isAllowed)
+      |  response.ts = r[lastRefillTimeBin] or instant
+      |  response.remaining = remaining
+      |  response.isAllowed = isAllowed
+      |end
+      |
       |function acquire(r, currentTimestamp, cost, maxTokens, refillAmount, refillTime)
       |  createIfNotExists(r, currentTimestamp, maxTokens)
       |  refill(r, currentTimestamp, maxTokens, refillAmount, refillTime)
       |  
       |  local current = r[currentTokensBin]
       |  local remaining = current - cost
+      |  
+      |  local response = map()
+      |  
       |  if remaining >= 0 then
       |    r[currentTokensBin] = remaining
+      |    prepareResponse(r, response, currentTimestamp, remaining, 1) 
       |    aerospike:update(r)
-      |    return 1
+      |    return response
       |  else 
+      |    prepareResponse(r, response, currentTimestamp, current, 0)
       |    aerospike:update(r)
-      |    return 0
+      |    return response
       |  end
       |end
       |
@@ -61,34 +72,46 @@ object LuaScript {
       |local usedTokensBin = 'ut'
       |local highWatermarkBin = 'hw'
       |
-      |function acquire(r, windowStartTs, cost, maxTokens, windowSize)
+      |local function prepareResponse(r, response, instant, maxTokens, isAllowed)
+      |  response.ts = r[highWatermarkBin] or instant
+      |  response.remaining = maxTokens - r[usedTokensBin]
+      |  response.isAllowed = isAllowed
+      |end
+      |
+      |local function createIfNotExists(r, windowStartTs)
       |  if not aerospike:exists(r) then
       |    r[highWatermarkBin] = windowStartTs
       |    r[usedTokensBin] = 0
       |    aerospike:create(r) 
       |  end
-      |  
+      |end
+      |
+      |function acquire(r, windowStartTs, cost, maxTokens, windowSize)
+      |  createIfNotExists(r, windowStartTs)
+      |  local response = map()
       |  local hw = r[highWatermarkBin]
       |  
       |  if hw > windowStartTs then
-      |   aerospike:update(r)
-      |   return 0
+      |    prepareResponse(r, response, windowStartTs, maxTokens, 0)
+      |    aerospike:update(r)
+      |    return response
       |  end
       |   
       |  if windowStartTs - hw >= windowSize then
+      |    r[highWatermarkBin] = windowStartTs
       |    r[usedTokensBin] = 0
       |  end
-      |  
-      |  r[highWatermarkBin] = windowStartTs
       |  
       |  local usedTokens = r[usedTokensBin] or 0
       |  if maxTokens - usedTokens - cost >= 0 then
       |    r[usedTokensBin] = usedTokens + cost
+      |    prepareResponse(r, response, windowStartTs, maxTokens, 1)
       |    aerospike:update(r)
-      |    return 1
+      |    return response
       |  else
+      |    prepareResponse(r, response, windowStartTs, maxTokens, 0)
       |    aerospike:update(r)
-      |    return 0
+      |    return response
       |  end
       |end
       |
@@ -106,7 +129,6 @@ object LuaScript {
       |    if windowStartTs - hw >= windowSize then
       |      r[usedTokensBin] = 0
       |    end
-      |  
       |    
       |    return math.max(0, maxTokens - r[usedTokensBin])
       |  end
@@ -118,6 +140,7 @@ object LuaScript {
     """
       |local usedTokensBin = 'ut'
       |local oldestBlockBin = 'ob' 
+      |local hw = 'hw'
       |
       |local function cleanup(r, trimBefore, oldestBlock, blocks)
       |  local decrement = 0
@@ -144,6 +167,12 @@ object LuaScript {
       |  end
       |end
       |
+      |local function prepareResponse(r, response, instant, maxTokens, isAllowed)
+      |  response.ts = r[hw] or instant
+      |  response.remaining = maxTokens - r[usedTokensBin]
+      |  response.isAllowed = isAllowed
+      |end
+      |
       |function acquire(r, instant, cost, maxTokens, windowSize, precision)
       |  createIfNotExists(r)
       |
@@ -154,23 +183,30 @@ object LuaScript {
       |  local oldestBlock = r[oldestBlockBin]
       |  oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
       |  
+      |  local response = map()
+      |  
       |  -- attempt to write in the past
       |  if oldestBlock > currentBlock then
-      |    return 0
+      |    prepareResponse(r, response, instant, maxTokens, 0)
+      |    return response
       |  end
       |  
       |  cleanup(r, trimBefore, oldestBlock, blocks)
       |  
       |  if r[usedTokensBin] + cost > maxTokens then
-      |    return 0
+      |    prepareResponse(r, response, instant, maxTokens, 0)
+      |    return response
       |  end
       |  
       |  r[usedTokensBin] = r[usedTokensBin] + cost
       |  r[currentBlock] = tonumber(r[currentBlock] or 0) + cost
+      |  r[hw] = instant
+      |  
+      |  prepareResponse(r, response, instant, maxTokens, 1)
       |  
       |  aerospike:update(r)
       |
-      |  return 1
+      |  return response
       |end
       |
       |function permissions(r, instant, maxTokens, windowSize, precision)

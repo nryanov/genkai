@@ -2,7 +2,7 @@ package genkai.redis
 
 import java.time.Instant
 
-import genkai.{Key, Strategy, Window}
+import genkai.{Key, RateLimiter, Strategy, Window}
 
 /**
  * Redis specific wrapper for [[genkai.Strategy]]
@@ -51,6 +51,8 @@ sealed trait RedisStrategy {
    */
   def isAllowed(value: Long): Boolean
 
+  def toState(response: Any, instant: Instant, key: String): RateLimiter.State
+
   /**
    * @param value - returned value after [[genkai.RateLimiter.permissions()]]
    * @return - unused permissions
@@ -88,6 +90,23 @@ object RedisStrategy {
     override def isAllowed(value: Long): Boolean = value != 0
 
     override def toPermissions(value: Long): Long = value
+
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
+      val state = response.asInstanceOf[java.util.ArrayList[Long]]
+
+      val ts = state.get(0)
+      val reset = ts + underlying.refillDelay.toSeconds
+      val resetAfter = reset - instant.getEpochSecond
+
+      RateLimiter.State(
+        underlying.tokens,
+        state.get(1),
+        isAllowed(state.get(2)),
+        reset,
+        resetAfter,
+        key
+      )
+    }
   }
 
   final case class RedisFixedWindow(underlying: Strategy.FixedWindow) extends RedisStrategy {
@@ -119,6 +138,23 @@ object RedisStrategy {
     override def isAllowed(value: Long): Boolean = value != 0
 
     override def toPermissions(value: Long): Long = value
+
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
+      val state = response.asInstanceOf[java.util.ArrayList[Long]]
+
+      val ts = state.get(0)
+      val reset = ts + underlying.window.size
+      val resetAfter = reset - instant.getEpochSecond
+
+      RateLimiter.State(
+        underlying.tokens,
+        state.get(1),
+        isAllowed(state.get(2)),
+        reset,
+        resetAfter,
+        key
+      )
+    }
   }
 
   final case class RedisSlidingWindow(underlying: Strategy.SlidingWindow) extends RedisStrategy {
@@ -159,5 +195,22 @@ object RedisStrategy {
     override def isAllowed(value: Long): Boolean = value != 0
 
     override def toPermissions(value: Long): Long = value
+
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
+      val state = response.asInstanceOf[java.util.ArrayList[Long]]
+
+      val ts = state.get(0)
+      val reset = ts + underlying.window.size
+      val resetAfter = reset - instant.getEpochSecond
+
+      RateLimiter.State(
+        underlying.tokens,
+        state.get(1),
+        isAllowed(state.get(2)),
+        reset,
+        resetAfter,
+        key
+      )
+    }
   }
 }

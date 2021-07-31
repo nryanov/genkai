@@ -2,7 +2,7 @@ package genkai.aerospike
 
 import java.time.Instant
 
-import genkai.{Key, Strategy, Window}
+import genkai.{Key, RateLimiter, Strategy, Window}
 import com.aerospike.client.{Value, Key => AKey}
 
 /**
@@ -70,6 +70,8 @@ sealed trait AerospikeStrategy {
    */
   def isAllowed(value: Long): Boolean
 
+  def toState(response: Any, instant: Instant, key: String): RateLimiter.State
+
   /**
    * @param value - returned value after [[genkai.RateLimiter.permissions()]]
    * @return - unused permissions
@@ -119,6 +121,23 @@ object AerospikeStrategy {
     override def isAllowed(value: Long): Boolean = value != 0
 
     override def toPermissions(value: Long): Long = value
+
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
+      val state = response.asInstanceOf[java.util.HashMap[String, Long]]
+
+      val ts = state.get("ts")
+      val reset = ts + underlying.refillDelay.toSeconds
+      val resetAfter = reset - instant.getEpochSecond
+
+      RateLimiter.State(
+        underlying.tokens,
+        state.get("remaining"),
+        isAllowed(state.get("isAllowed")),
+        reset,
+        resetAfter,
+        key
+      )
+    }
   }
 
   final case class AerospikeFixedWindow(underlying: Strategy.FixedWindow)
@@ -164,6 +183,23 @@ object AerospikeStrategy {
     override def isAllowed(value: Long): Boolean = value != 0
 
     override def toPermissions(value: Long): Long = value
+
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
+      val state = response.asInstanceOf[java.util.HashMap[String, Long]]
+
+      val ts = state.get("ts")
+      val reset = ts + underlying.window.size
+      val resetAfter = reset - instant.getEpochSecond
+
+      RateLimiter.State(
+        underlying.tokens,
+        state.get("remaining"),
+        isAllowed(state.get("isAllowed")),
+        reset,
+        resetAfter,
+        key
+      )
+    }
   }
 
   final case class AerospikeSlidingWindow(underlying: Strategy.SlidingWindow)
@@ -207,5 +243,22 @@ object AerospikeStrategy {
     override def isAllowed(value: Long): Boolean = value != 0
 
     override def toPermissions(value: Long): Long = value
+
+    override def toState(response: Any, instant: Instant, key: String): RateLimiter.State = {
+      val state = response.asInstanceOf[java.util.HashMap[String, Long]]
+
+      val ts = state.get("ts")
+      val reset = ts + underlying.window.size
+      val resetAfter = reset - instant.getEpochSecond
+
+      RateLimiter.State(
+        underlying.tokens,
+        state.get("remaining"),
+        isAllowed(state.get("isAllowed")),
+        reset,
+        resetAfter,
+        key
+      )
+    }
   }
 }

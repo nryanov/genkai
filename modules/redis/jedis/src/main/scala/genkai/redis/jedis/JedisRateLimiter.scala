@@ -33,14 +33,18 @@ abstract class JedisRateLimiter[F[_]](
     useClient(client => monad.eval(client.unlink(keyStr: _*)))
   }
 
-  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] =
+  override private[genkai] def acquireS[A: Key](
+    key: A,
+    instant: Instant,
+    cost: Long
+  ): F[RateLimiter.State] =
     useClient { client =>
       val keys = strategy.keys(key, instant)
       val args = keys ::: strategy.acquireArgs(instant, cost)
 
       for {
-        tokens <- monad.eval(client.evalsha(acquireSha, keys.size, args: _*))
-      } yield strategy.isAllowed(tokens.toString.toLong)
+        state <- monad.eval(client.evalsha(acquireSha, keys.size, args: _*))
+      } yield strategy.toState(state, instant, Key[A].convert(key))
     }
 
   override def close(): F[Unit] =
