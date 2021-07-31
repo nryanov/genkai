@@ -28,6 +28,12 @@ object LuaScript {
       |  end
       |end
       |
+      |local function prepareResponse(r, response, instant, remaining, isAllowed)
+      |  response.ts = r[lastRefillTimeBin] or instant
+      |  response.remaining = remaining
+      |  response.isAllowed = isAllowed
+      |end
+      |
       |function acquire(r, currentTimestamp, cost, maxTokens, refillAmount, refillTime)
       |  createIfNotExists(r, currentTimestamp, maxTokens)
       |  refill(r, currentTimestamp, maxTokens, refillAmount, refillTime)
@@ -36,23 +42,15 @@ object LuaScript {
       |  local remaining = current - cost
       |  
       |  local response = map()
-      |  response.ts = r[lastRefillTimeBin]
       |  
       |  if remaining >= 0 then
       |    r[currentTokensBin] = remaining
-      |    
-      |    response.remaining = remaining
-      |    response.isAllowed = 1
-      |    
+      |    prepareResponse(r, response, currentTimestamp, remaining, 1) 
       |    aerospike:update(r)
-      |    
       |    return response
       |  else 
+      |    prepareResponse(r, response, currentTimestamp, current, 0)
       |    aerospike:update(r)
-      |    
-      |    response.remaining = current
-      |    response.isAllowed = 0
-      |    
       |    return response
       |  end
       |end
