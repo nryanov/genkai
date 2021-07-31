@@ -13,41 +13,50 @@ object LuaScript {
    * args: key, current_timestamp (epoch seconds), cost, maxTokens, refillAmount, refillTime (seconds)
    * key format: token_bucket:<key>
    * hash structure: f1: value, f2: lastRefillTime
-   * @return - 1 if token acquired, 0 - otherwise
+   * @return - {lastRefillTime, remainingTokens, isAllowed}
    */
   val tokenBucketAcquire: String =
     """
+      |local createIfNotExists = function(key, maxTokens, instant)
+      |  if redis.call('EXISTS', key) == 0 then 
+      |    redis.call('HMSET', key, 'tokens', maxTokens, 'lastRefillTime', instant, 'hw', instant)
+      |  end
+      |end
+      |
+      |local refill = function(key, instant, maxTokens, refillAmount, refillTime)
+      |  local state = redis.call('HMGET', key, 'tokens', 'lastRefillTime')
+      |  local remainingTokens = tonumber(state[1])
+      |  local lastRefillTime = tonumber(state[2])
+      |
+      |  if instant - lastRefillTime >= refillTime then 
+      |    local refillTimes = math.floor((instant - lastRefillTime) / refillTime)
+      |    local refilledTokens = math.min(maxTokens, remainingTokens + refillAmount * refillTimes)
+      |    redis.call('HSET', key, 'tokens', refilledTokens, 'lastRefillTime', instant)
+      |  end
+      |end
+      |
+      |local prepareResponse = function(instant, remaining, isAllowed)
+      |  return {tonumber(instant), tonumber(remaining), isAllowed}
+      |end
+      |
       |local currentTimestamp = tonumber(ARGV[1])
       |local cost = tonumber(ARGV[2])
       |local maxTokens = tonumber(ARGV[3])
       |local refillAmount = tonumber(ARGV[4])
       |local refillTime = tonumber(ARGV[5])
-      |local isExists = redis.call('EXISTS', KEYS[1])
       |
-      |if isExists == 0 then 
-      |  redis.call('HMSET', KEYS[1], 'tokens', maxTokens, 'lastRefillTime', currentTimestamp, 'hw', currentTimestamp)
-      |end
-      |
-      |local current = redis.call('HMGET', KEYS[1], 'tokens', 'lastRefillTime')
-      |local lastRefillTime = tonumber(current[2])
-      |
-      |if currentTimestamp - lastRefillTime >= refillTime then 
-      |    local refillTimes = math.floor((currentTimestamp - lastRefillTime) / refillTime)
-      |    local refill = math.min(maxTokens, current[1] + refillAmount * refillTimes)
-      |    redis.call('HSET', KEYS[1], 'tokens', refill, 'lastRefillTime', currentTimestamp)
-      |end
+      |createIfNotExists(KEYS[1], maxTokens, currentTimestamp)
+      |refill(KEYS[1], currentTimestamp, maxTokens, refillAmount, refillTime)
       |
       |local updatedLastRefillTime = redis.call('HGET', KEYS[1], 'lastRefillTime')
-      |updatedLastRefillTime = updatedLastRefillTime and tonumber(updatedLastRefillTime) or currentTimestamp
-      |
       |local currentTokens = tonumber(redis.call('HGET', KEYS[1], 'tokens'))
       |local remaining = currentTokens - cost
       |
       |if remaining >= 0 then
       |    redis.call('HSET', KEYS[1], 'tokens', remaining)
-      |    return {tonumber(updatedLastRefillTime), tonumber(remaining), 1}
+      |    return prepareResponse(updatedLastRefillTime, remaining, 1)
       |else
-      |    return {tonumber(updatedLastRefillTime), tonumber(currentTokens), 0}
+      |    return prepareResponse(updatedLastRefillTime, currentTokens, 0)
       |end
       |""".stripMargin
 
@@ -59,6 +68,18 @@ object LuaScript {
    */
   val tokenBucketPermissions: String =
     """
+      |local refill = function(key, instant, maxTokens, refillAmount, refillTime)
+      |  local state = redis.call('HMGET', key, 'tokens', 'lastRefillTime')
+      |  local remainingTokens = tonumber(state[1])
+      |  local lastRefillTime = tonumber(state[2])
+      |
+      |  if instant - lastRefillTime >= refillTime then 
+      |    local refillTimes = math.floor((instant - lastRefillTime) / refillTime)
+      |    local refilledTokens = math.min(maxTokens, remainingTokens + refillAmount * refillTimes)
+      |    redis.call('HSET', key, 'tokens', refilledTokens, 'lastRefillTime', instant)
+      |  end
+      |end
+      |
       |local currentTimestamp = tonumber(ARGV[1])
       |local maxTokens = tonumber(ARGV[2])
       |local refillAmount = tonumber(ARGV[3])
@@ -69,16 +90,7 @@ object LuaScript {
       |  -- record does not exists yet, so permissions are not used
       |  return maxTokens
       |else
-      |  local current = redis.call('HMGET', KEYS[1], 'tokens', 'lastRefillTime')
-      |  local lastRefillTime = tonumber(current[2])
-      |  
-      |  -- refill
-      |  if currentTimestamp - lastRefillTime >= refillTime then 
-      |    local refillTimes = math.floor((currentTimestamp - lastRefillTime) / refillTime)
-      |    local refill = math.min(maxTokens, current[1] + refillAmount * refillTimes)
-      |    redis.call('HMSET', KEYS[1], 'tokens', refill, 'lastRefillTime', currentTimestamp)
-      |  end
-      |
+      |  refill(KEYS[1], currentTimestamp, maxTokens, refillAmount, refillTime)
       |  return tonumber(redis.call('HGET', KEYS[1], 'tokens'))
       |end
       |""".stripMargin
