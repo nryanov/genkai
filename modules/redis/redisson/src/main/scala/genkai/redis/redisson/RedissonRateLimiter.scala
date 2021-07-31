@@ -43,19 +43,19 @@ abstract class RedissonRateLimiter[F[_]](
     monad.eval(client.getKeys.unlink(keyStr: _*)).void
   }
 
-  override def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
+  override def acquireS[A: Key](key: A, instant: Instant, cost: Long): F[RateLimiter.State] = {
     val keyStr = strategy.keys(key, instant)
     val args = strategy.acquireArgs(instant, cost)
 
     monad
       .eval(
-        evalSha(
+        evalShaMulti(
           acquireSha,
           new java.util.LinkedList[Object](keyStr.asJava),
           args
         )
       )
-      .map(strategy.isAllowed)
+      .map(strategy.toState(_, instant, Key[A].convert(key)))
   }
 
   override def close(): F[Unit] =
@@ -71,6 +71,15 @@ abstract class RedissonRateLimiter[F[_]](
       RScript.Mode.READ_WRITE,
       sha,
       RScript.ReturnType.INTEGER,
+      keys,
+      args: _*
+    )
+
+  private def evalShaMulti(sha: String, keys: java.util.List[Object], args: Seq[String]): Any =
+    scriptCommand.evalSha[Any](
+      RScript.Mode.READ_WRITE,
+      sha,
+      RScript.ReturnType.MULTI,
       keys,
       args: _*
     )
