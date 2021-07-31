@@ -91,6 +91,10 @@ lazy val genkai =
     .settings(noPublish)
     .aggregate(
       core,
+      examples,
+      examplesCats,
+      examplesCats3,
+      examplesZio,
       cats,
       cats3,
       zio,
@@ -320,3 +324,51 @@ lazy val aerospikeZio = project
   .settings(moduleName := "genkai-aerospike-zio")
   .dependsOn(aerospike % compileAndTest)
   .dependsOn(zio % compileAndTest)
+
+lazy val examples = project
+  .in(file("examples"))
+  .settings(allSettings)
+  .settings(noPublish)
+  .settings(moduleName := "examples")
+  .dependsOn(
+    aerospike % compileAndTest,
+    jedis % compileAndTest,
+    lettuce % compileAndTest,
+    redisson % compileAndTest
+  )
+
+lazy val examplesCats = project
+  .in(file("examples/cats"))
+  .settings(allSettings)
+  .settings(noPublish)
+  .settings(moduleName := "examples-cats")
+  .dependsOn(
+    aerospikeCats % compileAndTest,
+    jedisCats % compileAndTest,
+    lettuceCats % compileAndTest,
+    redissonCats % compileAndTest
+  )
+
+lazy val examplesCats3 = project
+  .in(file("examples/cats3"))
+  .settings(allSettings)
+  .settings(noPublish)
+  .settings(moduleName := "examples-cats3")
+  .dependsOn(
+    aerospikeCats3 % compileAndTest,
+    jedisCats3 % compileAndTest,
+    lettuceCats3 % compileAndTest,
+    redissonCats3 % compileAndTest
+  )
+
+lazy val examplesZio = project
+  .in(file("examples/zio"))
+  .settings(allSettings)
+  .settings(noPublish)
+  .settings(moduleName := "examples-zio")
+  .dependsOn(
+    aerospikeZio % compileAndTest,
+    jedisZio % compileAndTest,
+    lettuceZio % compileAndTest,
+    redissonZio % compileAndTest
+  )

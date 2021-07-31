@@ -43,8 +43,8 @@ abstract class JedisRateLimiter[F[_]](
       val args = keys ::: strategy.acquireArgs(instant, cost)
 
       for {
-        tokens <- monad.eval(client.evalsha(acquireSha, keys.size, args: _*))
-      } yield strategy.toState(tokens, instant, Key[A].convert(key))
+        state <- monad.eval(client.evalsha(acquireSha, keys.size, args: _*))
+      } yield strategy.toState(state, instant, Key[A].convert(key))
     }
 
   override def close(): F[Unit] =
