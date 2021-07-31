@@ -42,7 +42,11 @@ abstract class AerospikeRateLimiter[F[_]](
     monad.eval(client.delete(writePolicy, keyStr)).void
   }
 
-  override private[genkai] def acquire[A: Key](key: A, instant: Instant, cost: Long): F[Boolean] = {
+  override private[genkai] def acquireS[A: Key](
+    key: A,
+    instant: Instant,
+    cost: Long
+  ): F[RateLimiter.State] = {
     val keyStr = strategy.key(namespace, key, instant)
     val args = strategy.acquireArgs(instant, cost)
 
@@ -51,7 +55,7 @@ abstract class AerospikeRateLimiter[F[_]](
         client
           .execute(writePolicy, keyStr, strategy.packageName, strategy.acquireFunction, args: _*)
       )
-      .map(tokens => strategy.isAllowed(tokens.asInstanceOf[Long]))
+      .map(tokens => strategy.toState(tokens, instant, Key[A].convert(key)))
   }
 
   override def close(): F[Unit] = monad.whenA(closeClient)(monad.eval(client.close()))

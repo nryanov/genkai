@@ -2,10 +2,12 @@ package genkai
 
 import java.time.Instant
 
+import genkai.monad.MonadError
+
 /**
  * @tparam F - effect type
  */
-trait ConcurrentRateLimiter[F[_]] extends MonadErrorAware[F] {
+trait ConcurrentRateLimiter[F[_]] {
 
   final def use[A: Key, B](key: A)(f: => F[B]): F[Either[ConcurrentLimitExhausted[A], B]] =
     use(key, Instant.now())(f)
@@ -37,4 +39,6 @@ trait ConcurrentRateLimiter[F[_]] extends MonadErrorAware[F] {
   private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long]
 
   def close(): F[Unit]
+
+  def monadError: MonadError[F]
 }
