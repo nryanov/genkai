@@ -122,7 +122,7 @@ object LuaScript {
       |    return {tonumber(windowStartTs), tonumber(maxTokens - current - cost), 1}
       |else
       |    redis.call('EXPIRE', KEYS[1], ttl)
-      |    return {tonumber(windowStartTs), tonumber(current), 0}
+      |    return {tonumber(windowStartTs), tonumber(maxTokens - current), 0}
       |end
       |""".stripMargin
 
@@ -214,7 +214,7 @@ object LuaScript {
       |end
       |
       |if used + cost > maxTokens then
-      |  return {tonumber(redis.call('HGET', key, hw)) or 0, maxTokens - used, 0}
+      |  return {tonumber(redis.call('HGET', key, hw)) or instant, maxTokens - used, 0}
       |end
       |
       |redis.call('HSET', key, oldestBlockKey, trimBefore)
