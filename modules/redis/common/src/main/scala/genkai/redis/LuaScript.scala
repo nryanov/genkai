@@ -98,43 +98,50 @@ object LuaScript {
   /**
    * args: key, windowStartTs (epoch seconds), cost, maxTokens, ttl (windowSize, seconds)
    * key format: fixed_window:<key>:<timestamp> where <timestamp> is truncated to the beginning of the window
-   * @return - 1 if token acquired, 0 - otherwise
+   * @return - {highWatermarkTs, remainingTokens, isAllowed}
    */
   val fixedWindowAcquire: String =
     """
+      |local createIfNotExist = function(key, instant)
+      |  if redis.call('EXISTS', key) == 0 then 
+      |    redis.call('HMSET', key, 'usedTokens', 0, 'hw', instant)
+      |  end
+      |end
+      |
+      |local prepareResponse = function(key, maxTokens, usedTokens, isAllowed)
+      |  local hw = tonumber(redis.call('HGET', key, 'hw'))
+      |  local remaining = maxTokens - tonumber(usedTokens)
+      |  return {hw, remaining, isAllowed}
+      |end
+      |
       |local windowStartTs = tonumber(ARGV[1])
       |local cost = tonumber(ARGV[2])
       |local maxTokens = tonumber(ARGV[3])
       |local ttl = tonumber(ARGV[4])
       |
-      |local isExists = redis.call('EXISTS', KEYS[1])
+      |createIfNotExist(KEYS[1], windowStartTs)
       |
-      |if isExists == 0 then 
-      |  redis.call('HMSET', KEYS[1], 'usedTokens', 0, 'hw', windowStartTs)
-      |end
-      |
-      |local hw = redis.call('HGET', KEYS[1], 'hw')
-      |hw = hw and tonumber(hw) or windowStartTs 
+      |local hw = tonumber(redis.call('HGET', KEYS[1], 'hw')) 
       |
       |if hw > windowStartTs then
       |  local used = tonumber(redis.call('HGET', KEYS[1], 'usedTokens')) or 0
-      |  return {tonumber(hw), tonumber(maxTokens - used), 0}
+      |  return prepareResponse(KEYS[1], maxTokens, used, 0)
       |end
       |
       |if windowStartTs - hw >= ttl then
       |  redis.call('HSET', KEYS[1], 'usedTokens', 0)
+      |  redis.call('HSET', KEYS[1], 'hw', windowStartTs)
       |end
       |
-      |redis.call('HSET', KEYS[1], 'hw', windowStartTs)
       |local current = redis.call('HGET', KEYS[1], 'usedTokens')
       |
       |if maxTokens - current - cost >= 0 then
       |    redis.call('HINCRBY', KEYS[1], 'usedTokens', cost)
       |    redis.call('EXPIRE', KEYS[1], ttl)
-      |    return {tonumber(windowStartTs), tonumber(maxTokens - current - cost), 1}
+      |    return prepareResponse(KEYS[1], maxTokens, current + cost, 1)
       |else
       |    redis.call('EXPIRE', KEYS[1], ttl)
-      |    return {tonumber(windowStartTs), tonumber(maxTokens - current), 0}
+      |    return prepareResponse(KEYS[1], maxTokens, current, 0)
       |end
       |""".stripMargin
 
@@ -175,11 +182,46 @@ object LuaScript {
   /**
    * input: key, instant (epoch seconds), cost, maxTokens, windowSize (seconds), precision, ttl (seconds)
    * key format: sliding_window:<key>
-   * @return - 1 if token acquired, 0 - otherwise
+   * @return - {highWatermarkTs, remainingTokens, isAllowed}
    */
   // ref: https://www.dr-josiah.com/2014/11/introduction-to-rate-limiting-with_26.html
   val slidingWindowAcquire: String =
     """
+      |local usedTokensKey = 'ut'
+      |local oldestBlockKey = 'ob'
+      |local hw = 'hw'
+      |
+      |local removeOld = function(key, trimBefore, oldestBlock, blocks)
+      |  local decrement = 0
+      |  local deletion = {}
+      |  local trim = math.min(trimBefore, oldestBlock + blocks)
+      |
+      |  for oldBlock = oldestBlock, trim - 1 do
+      |    local bKey = usedTokensKey .. oldBlock
+      |    local bCount = redis.call('HGET', key, bKey)
+      |    if bCount then
+      |      decrement = decrement + tonumber(bCount)
+      |      table.insert(deletion, bKey)
+      |    end
+      |  end
+      |
+      |  local used = 0
+      |  if #deletion > 0 then
+      |    redis.call('HDEL', key, unpack(deletion))
+      |    used = tonumber(redis.call('HINCRBY', key, usedTokensKey, -decrement))
+      |  else
+      |    used = tonumber(redis.call('HGET', key, usedTokensKey) or '0')
+      |  end
+      |  
+      |  return used
+      |end
+      |
+      |local prepareResponse = function(key, instant, maxTokens, isAllowed)
+      |  local used = tonumber(redis.call('HGET', key, usedTokensKey)) or 0
+      |  local oldestTs = tonumber(redis.call('HGET', key, hw) or instant)
+      |  return {oldestTs, maxTokens - used, isAllowed}
+      |end
+      |
       |local key = KEYS[1]
       |local instant = tonumber(ARGV[1])
       |local cost = tonumber(ARGV[2])
@@ -192,41 +234,18 @@ object LuaScript {
       |
       |local currentBlock = math.floor(instant / precision)
       |local trimBefore = currentBlock - blocks + 1
-      |local usedTokensKey = 'ut'
-      |local oldestBlockKey = 'ob'
-      |local hw = 'hw'
       |
       |local oldestBlock = redis.call('HGET', key, oldestBlockKey)
       |oldestBlock = oldestBlock and tonumber(oldestBlock) or trimBefore
+      |
       |if oldestBlock > currentBlock then
-      |  local used = tonumber(redis.call('HGET', key, usedTokensKey)) or 0
-      |  local oldestTs = tonumber(redis.call('HGET', key, hw)) or 0
-      |  return {oldestTs, maxTokens - used, 0}
+      |  return prepareResponse(key, instant, maxTokens, 0)
       |end
       |
-      |local decrement = 0
-      |local deletion = {}
-      |local trim = math.min(trimBefore, oldestBlock + blocks)
-      |
-      |for oldBlock = oldestBlock, trim - 1 do
-      |  local bKey = usedTokensKey .. oldBlock
-      |  local bCount = redis.call('HGET', key, bKey)
-      |  if bCount then
-      |    decrement = decrement + tonumber(bCount)
-      |    table.insert(deletion, bKey)
-      |  end
-      |end
-      |
-      |local used = 0
-      |if #deletion > 0 then
-      |  redis.call('HDEL', key, unpack(deletion))
-      |  used = tonumber(redis.call('HINCRBY', key, usedTokensKey, -decrement))
-      |else
-      |  used = tonumber(redis.call('HGET', key, usedTokensKey) or '0')
-      |end
+      |local used = removeOld(key, trimBefore, oldestBlock, blocks)
       |
       |if used + cost > maxTokens then
-      |  return {tonumber(redis.call('HGET', key, hw)) or instant, maxTokens - used, 0}
+      |  return prepareResponse(key, instant, maxTokens, 0)
       |end
       |
       |redis.call('HSET', key, oldestBlockKey, trimBefore)
@@ -236,7 +255,7 @@ object LuaScript {
       |
       |redis.call('EXPIRE', key, ttl)
       |
-      |return {instant, maxTokens - used - cost, 1}
+      |return prepareResponse(key, instant, maxTokens, 1)
       |""".stripMargin
 
   /**
