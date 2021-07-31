@@ -72,44 +72,44 @@ object LuaScript {
       |local usedTokensBin = 'ut'
       |local highWatermarkBin = 'hw'
       |
-      |function acquire(r, windowStartTs, cost, maxTokens, windowSize)
+      |local function prepareResponse(r, response, instant, maxTokens, isAllowed)
+      |  response.ts = r[highWatermarkBin] or instant
+      |  response.remaining = maxTokens - r[usedTokensBin]
+      |  response.isAllowed = isAllowed
+      |end
+      |
+      |local function createIfNotExists(r, windowStartTs)
       |  if not aerospike:exists(r) then
       |    r[highWatermarkBin] = windowStartTs
       |    r[usedTokensBin] = 0
       |    aerospike:create(r) 
       |  end
-      |  
+      |end
+      |
+      |function acquire(r, windowStartTs, cost, maxTokens, windowSize)
+      |  createIfNotExists(r, windowStartTs)
+      |  local response = map()
       |  local hw = r[highWatermarkBin]
       |  
-      |  local response = map()
-      |  response.ts = hw
-      |  
       |  if hw > windowStartTs then
-      |   aerospike:update(r)
-      |   
-      |   response.remaining = maxTokens - r[usedTokensBin]
-      |   response.isAllowed = 0
-      |   
-      |   return response
+      |    prepareResponse(r, response, windowStartTs, maxTokens, 0)
+      |    aerospike:update(r)
+      |    return response
       |  end
       |   
       |  if windowStartTs - hw >= windowSize then
+      |    r[highWatermarkBin] = windowStartTs
       |    r[usedTokensBin] = 0
       |  end
-      |  
-      |  r[highWatermarkBin] = windowStartTs
-      |  response.ts = windowStartTs
       |  
       |  local usedTokens = r[usedTokensBin] or 0
       |  if maxTokens - usedTokens - cost >= 0 then
       |    r[usedTokensBin] = usedTokens + cost
-      |    response.remaining = maxTokens - r[usedTokensBin]
-      |    response.isAllowed = 1
+      |    prepareResponse(r, response, windowStartTs, maxTokens, 1)
       |    aerospike:update(r)
       |    return response
       |  else
-      |    response.remaining = maxTokens - r[usedTokensBin]
-      |    response.isAllowed = 0
+      |    prepareResponse(r, response, windowStartTs, maxTokens, 0)
       |    aerospike:update(r)
       |    return response
       |  end
@@ -129,7 +129,6 @@ object LuaScript {
       |    if windowStartTs - hw >= windowSize then
       |      r[usedTokensBin] = 0
       |    end
-      |  
       |    
       |    return math.max(0, maxTokens - r[usedTokensBin])
       |  end
