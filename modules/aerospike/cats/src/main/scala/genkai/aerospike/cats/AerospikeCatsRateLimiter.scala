@@ -1,6 +1,6 @@
 package genkai.aerospike.cats
 
-import cats.effect.{Blocker, ContextShift, Resource, Sync}
+import cats.effect.{Resource, Sync}
 import com.aerospike.client.policy.ClientPolicy
 import com.aerospike.client.{AerospikeClient, Language}
 import genkai.Strategy
@@ -29,7 +29,6 @@ object AerospikeCatsRateLimiter {
     client: AerospikeClient,
     namespace: String,
     strategy: Strategy,
-    blocker: Blocker,
     sleepInterval: Duration = 1000 millis,
     timeout: Duration = 10000 millis
   ): F[AerospikeCatsRateLimiter[F]] = {
@@ -64,7 +63,6 @@ object AerospikeCatsRateLimiter {
     policy: ClientPolicy = new ClientPolicy(),
     namespace: String,
     strategy: Strategy,
-    blocker: Blocker,
     sleepInterval: Duration = 1000 millis,
     timeout: Duration = 10000 millis
   ): Resource[F, AerospikeCatsRateLimiter[F]] = {
