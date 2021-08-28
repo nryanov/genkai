@@ -1,6 +1,6 @@
 package genkai.redis.jedis.cats
 
-import cats.effect.{Blocker, ContextShift, Sync}
+import cats.effect.Sync
 import genkai.Strategy
 import genkai.effect.cats.CatsBlockingMonadError
 import genkai.redis.RedisStrategy
@@ -27,9 +27,7 @@ class JedisClusterCatsRateLimiter[F[_]: Sync: ContextShift] private (
 object JedisClusterCatsRateLimiter {
   def useClient[F[_]: Sync: ContextShift](
     cluster: JedisCluster,
-    strategy: Strategy,
-    blocker: Blocker
-  ): F[JedisClusterCatsRateLimiter[F]] = {
+    strategy: Strategy): F[JedisClusterCatsRateLimiter[F]] = {
     implicit val monad: CatsBlockingMonadError[F] = new CatsBlockingMonadError[F](blocker)
 
     val redisStrategy = RedisStrategy(strategy)

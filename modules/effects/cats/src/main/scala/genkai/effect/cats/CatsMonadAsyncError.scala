@@ -5,7 +5,7 @@ import genkai.monad.MonadAsyncError
 
 final class CatsMonadAsyncError[F[_]](implicit F: Concurrent[F]) extends MonadAsyncError[F] {
   override def async[A](k: (Either[Throwable, A] => Unit) => Unit): F[A] =
-    F.async(k)
+    F.async_(k)
 
   override def cancelable[A](k: (Either[Throwable, A] => Unit) => () => F[Unit]): F[A] =
     F.cancelable(k.andThen(_.apply()))
@@ -50,7 +50,7 @@ final class CatsMonadAsyncError[F[_]](implicit F: Concurrent[F]) extends MonadAs
 
   override def flatten[A](fa: => F[F[A]]): F[A] = F.flatten(fa)
 
-  override def guarantee[A](f: => F[A])(g: => F[Unit]): F[A] = F.guarantee(f)(g)
+  override def guarantee[A](f: => F[A])(g: => F[Unit]): F[A] = F.guarantee(f, g)
 
   override def bracket[A, B](acquire: => F[A])(use: A => F[B])(release: A => F[Unit]): F[B] =
     F.bracket(acquire)(use)(release)
