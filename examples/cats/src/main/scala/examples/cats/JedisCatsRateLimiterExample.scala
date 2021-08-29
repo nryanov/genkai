@@ -1,15 +1,15 @@
 package examples.cats
 
 import cats.effect._
-import cats.effect.concurrent.Ref
 import genkai.{Strategy, Window}
 import genkai.redis.jedis.cats.JedisCatsRateLimiter
 
 import scala.concurrent.duration._
+import cats.effect.{ Ref, Resource }
 
 object JedisCatsRateLimiterExample extends IOApp {
   override def run(args: List[String]): IO[ExitCode] =
-    Blocker[IO]
+    Resource.unit[IO]
       .flatMap(blocker =>
         JedisCatsRateLimiter.resource[IO](
           host = "localhost",
