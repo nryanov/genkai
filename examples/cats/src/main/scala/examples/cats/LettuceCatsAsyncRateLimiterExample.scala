@@ -1,11 +1,11 @@
 package examples.cats
 
 import cats.effect._
-import cats.effect.concurrent.Ref
 import genkai.Strategy
 import genkai.redis.lettuce.cats.LettuceCatsAsyncRateLimiter
 
 import scala.concurrent.duration._
+import cats.effect.Ref
 
 object LettuceCatsAsyncRateLimiterExample extends IOApp {
   override def run(args: List[String]): IO[ExitCode] =
