@@ -7,9 +7,7 @@ import zio.Task
 
 import scala.concurrent.Future
 
-class JedisZioConcurrentRateLimiterSpec
-    extends JedisConcurrentRateLimiterSpec[Task]
-    with ZioBaseSpec {
+class JedisZioConcurrentRateLimiterSpec extends JedisConcurrentRateLimiterSpec[Task] with ZioBaseSpec {
 
   override def concurrentRateLimiter(strategy: ConcurrentStrategy): ConcurrentRateLimiter[Task] =
     runtime.unsafeRun(JedisZioConcurrentRateLimiter.useClient(jedisPool, strategy))

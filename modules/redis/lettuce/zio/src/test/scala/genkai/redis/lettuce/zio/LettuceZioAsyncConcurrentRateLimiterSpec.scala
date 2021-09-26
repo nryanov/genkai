@@ -7,9 +7,7 @@ import zio.Task
 
 import scala.concurrent.Future
 
-class LettuceZioAsyncConcurrentRateLimiterSpec
-    extends LettuceConcurrentRateLimiterSpec[Task]
-    with ZioBaseSpec {
+class LettuceZioAsyncConcurrentRateLimiterSpec extends LettuceConcurrentRateLimiterSpec[Task] with ZioBaseSpec {
   override def concurrentRateLimiter(strategy: ConcurrentStrategy): ConcurrentRateLimiter[Task] =
     runtime.unsafeRun(LettuceZioAsyncConcurrentRateLimiter.useClient(redisClient, strategy))
 

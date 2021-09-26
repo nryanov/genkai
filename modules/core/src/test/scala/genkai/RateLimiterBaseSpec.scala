@@ -11,11 +11,7 @@ import org.scalatest.matchers.should.Matchers
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-trait RateLimiterBaseSpec[F[_]]
-    extends AsyncFunSuite
-    with Matchers
-    with BeforeAndAfterAll
-    with BeforeAndAfterEach {
+trait RateLimiterBaseSpec[F[_]] extends AsyncFunSuite with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
   implicit val ec: ExecutionContext = ExecutionContext.global
 
   def rateLimiter(strategy: Strategy): RateLimiter[F]
@@ -374,9 +370,8 @@ trait RateLimiterBaseSpec[F[_]]
         // reset = instant + 1 hour
         // reset after -- is relative to passed timestamp which is (instant - 2 hours) =>
         // resetAfter = (instant + 1 hour) - (instant - 2 hours)
-        resetAfter = instant
-          .plus(1, ChronoUnit.HOURS)
-          .getEpochSecond - instant.minus(2, ChronoUnit.HOURS).getEpochSecond,
+        resetAfter =
+          instant.plus(1, ChronoUnit.HOURS).getEpochSecond - instant.minus(2, ChronoUnit.HOURS).getEpochSecond,
         isAllowed = false
       )
     }
@@ -404,9 +399,8 @@ trait RateLimiterBaseSpec[F[_]]
       state1 shouldBe expectedState
       state2 shouldBe expectedState.copy(
         reset = instant.plus(1, ChronoUnit.HOURS).getEpochSecond,
-        resetAfter = instant
-          .plus(1, ChronoUnit.HOURS)
-          .getEpochSecond - instant.minus(2, ChronoUnit.HOURS).getEpochSecond,
+        resetAfter =
+          instant.plus(1, ChronoUnit.HOURS).getEpochSecond - instant.minus(2, ChronoUnit.HOURS).getEpochSecond,
         isAllowed = false
       )
     }

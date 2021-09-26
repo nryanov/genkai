@@ -53,7 +53,5 @@ abstract class JedisRateLimiter[F[_]](
   override def monadError: MonadError[F] = monad
 
   private def useClient[A](fa: Jedis => F[A]): F[A] =
-    monad.bracket(monad.eval(pool.getResource))(client => fa(client))(client =>
-      monad.eval(client.close())
-    )
+    monad.bracket(monad.eval(pool.getResource))(client => fa(client))(client => monad.eval(client.close()))
 }

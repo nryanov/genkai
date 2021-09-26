@@ -23,8 +23,7 @@ object AerospikeContainer {
             dockerImage = "aerospike:ce-5.4.0.11",
             exposedPorts = Seq(3000, 3001, 3002),
             command = Seq("--config-file", "/opt/aerospike/etc/aerospike.conf"),
-            classpathResourceMapping =
-              Seq(("aerospike.conf", "/opt/aerospike/etc/aerospike.conf", BindMode.READ_ONLY)),
+            classpathResourceMapping = Seq(("aerospike.conf", "/opt/aerospike/etc/aerospike.conf", BindMode.READ_ONLY)),
             waitStrategy = waitStrategy
           )
         )

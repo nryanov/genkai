@@ -52,8 +52,7 @@ abstract class AerospikeRateLimiter[F[_]](
 
     monad
       .eval(
-        client
-          .execute(writePolicy, keyStr, strategy.packageName, strategy.acquireFunction, args: _*)
+        client.execute(writePolicy, keyStr, strategy.packageName, strategy.acquireFunction, args: _*)
       )
       .map(tokens => strategy.toState(tokens, instant, Key[A].convert(key)))
   }

@@ -3,8 +3,7 @@ package genkai.effect.cats
 import cats.effect.{Blocker, ContextShift, Sync}
 import genkai.monad.MonadError
 
-final class CatsBlockingMonadError[F[_]: ContextShift](blocker: Blocker)(implicit F: Sync[F])
-    extends MonadError[F] {
+final class CatsBlockingMonadError[F[_]: ContextShift](blocker: Blocker)(implicit F: Sync[F]) extends MonadError[F] {
   override def pure[A](value: A): F[A] = F.pure(value)
 
   override def map[A, B](fa: => F[A])(f: A => B): F[B] = F.map(fa)(f)
