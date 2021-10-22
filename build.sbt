@@ -11,7 +11,7 @@ lazy val zioVersion = "1.0.11"
 lazy val monixVersion = "3.4.0"
 // test
 lazy val scalatestVersion = "3.2.9"
-lazy val testContainersVersion = "0.39.7"
+lazy val testContainersVersion = "0.39.9"
 lazy val logbackVersion = "1.2.5"
 
 val scala2_12 = "2.12.13"
