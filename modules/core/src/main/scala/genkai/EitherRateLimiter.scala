@@ -3,8 +3,7 @@ import java.time.Instant
 
 import genkai.monad.{EitherMonadError, MonadError}
 
-final class EitherRateLimiter(rateLimiter: RateLimiter[Id])
-    extends RateLimiter[Either[Throwable, *]] {
+final class EitherRateLimiter(rateLimiter: RateLimiter[Id]) extends RateLimiter[Either[Throwable, *]] {
   override private[genkai] def permissions[A: Key](
     key: A,
     instant: Instant

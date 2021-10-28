@@ -24,8 +24,7 @@ abstract class JedisClusterConcurrentRateLimiter[F[_]](
     monad.bracket(acquire(key, instant)) { acquired =>
       monad.ifM(monad.pure(acquired))(
         ifTrue = monad.suspend(f).map[Either[ConcurrentLimitExhausted[A], B]](r => Right(r)),
-        ifFalse =
-          monad.pure[Either[ConcurrentLimitExhausted[A], B]](Left(ConcurrentLimitExhausted(key)))
+        ifFalse = monad.pure[Either[ConcurrentLimitExhausted[A], B]](Left(ConcurrentLimitExhausted(key)))
       )
     }(acquired => monad.whenA(acquired)(release(key, instant).void))
 

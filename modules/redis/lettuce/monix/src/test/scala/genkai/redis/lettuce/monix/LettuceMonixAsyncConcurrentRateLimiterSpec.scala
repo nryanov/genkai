@@ -7,9 +7,7 @@ import monix.eval.Task
 
 import scala.concurrent.Future
 
-class LettuceMonixAsyncConcurrentRateLimiterSpec
-    extends LettuceConcurrentRateLimiterSpec[Task]
-    with MonixBaseSpec {
+class LettuceMonixAsyncConcurrentRateLimiterSpec extends LettuceConcurrentRateLimiterSpec[Task] with MonixBaseSpec {
   override def concurrentRateLimiter(strategy: ConcurrentStrategy): ConcurrentRateLimiter[Task] =
     LettuceMonixAsyncConcurrentRateLimiter.useClient(redisClient, strategy).runSyncUnsafe()
 

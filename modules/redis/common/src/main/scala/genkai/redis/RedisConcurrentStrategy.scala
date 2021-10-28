@@ -78,8 +78,7 @@ object RedisConcurrentStrategy {
     case s: ConcurrentStrategy.Default => RedisDefault(s)
   }
 
-  final case class RedisDefault(underlying: ConcurrentStrategy.Default)
-      extends RedisConcurrentStrategy {
+  final case class RedisDefault(underlying: ConcurrentStrategy.Default) extends RedisConcurrentStrategy {
     private val argsPart = List(
       underlying.slots.toString,
       underlying.ttl.toMillis.toString

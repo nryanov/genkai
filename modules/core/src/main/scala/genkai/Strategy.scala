@@ -11,8 +11,7 @@ object Strategy {
    * @param refillAmount - token which will be refilled after <refillDelay>
    * @param refillDelay - refill delay
    */
-  final case class TokenBucket(tokens: Long, refillAmount: Long, refillDelay: Duration)
-      extends Strategy
+  final case class TokenBucket(tokens: Long, refillAmount: Long, refillDelay: Duration) extends Strategy
 
   /**
    * @param tokens - max tokens per window
