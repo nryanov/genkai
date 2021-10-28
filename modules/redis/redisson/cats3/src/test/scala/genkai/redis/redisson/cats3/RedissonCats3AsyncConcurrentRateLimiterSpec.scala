@@ -7,9 +7,7 @@ import genkai.redis.redisson.RedissonConcurrentRateLimiterSpec
 
 import scala.concurrent.Future
 
-class RedissonCats3AsyncConcurrentRateLimiterSpec
-    extends RedissonConcurrentRateLimiterSpec[IO]
-    with Cats3BaseSpec {
+class RedissonCats3AsyncConcurrentRateLimiterSpec extends RedissonConcurrentRateLimiterSpec[IO] with Cats3BaseSpec {
   override def concurrentRateLimiter(strategy: ConcurrentStrategy): ConcurrentRateLimiter[IO] =
     RedissonCats3AsyncConcurrentRateLimiter.useClient[IO](redisClient, strategy).unsafeRunSync()
 

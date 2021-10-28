@@ -7,9 +7,7 @@ import genkai.redis.jedis.JedisConcurrentRateLimiterSpec
 
 import scala.concurrent.Future
 
-class JedisCats3ConcurrentRateLimiterSpec
-    extends JedisConcurrentRateLimiterSpec[IO]
-    with Cats3BaseSpec {
+class JedisCats3ConcurrentRateLimiterSpec extends JedisConcurrentRateLimiterSpec[IO] with Cats3BaseSpec {
   override def concurrentRateLimiter(strategy: ConcurrentStrategy): ConcurrentRateLimiter[IO] =
     JedisCats3ConcurrentRateLimiter.useClient[IO](jedisPool, strategy).unsafeRunSync()
 

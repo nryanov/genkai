@@ -63,8 +63,7 @@ abstract class LettuceAsyncConcurrentRateLimiter[F[_]](
     monad.bracket(acquire(key, instant)) { acquired =>
       monad.ifM(monad.pure(acquired))(
         ifTrue = monad.suspend(f).map[Either[ConcurrentLimitExhausted[A], B]](r => Right(r)),
-        ifFalse =
-          monad.pure[Either[ConcurrentLimitExhausted[A], B]](Left(ConcurrentLimitExhausted(key)))
+        ifFalse = monad.pure[Either[ConcurrentLimitExhausted[A], B]](Left(ConcurrentLimitExhausted(key)))
       )
     }(acquired => monad.whenA(acquired)(release(key, instant).void))
 
@@ -117,11 +116,11 @@ abstract class LettuceAsyncConcurrentRateLimiter[F[_]](
   override def close(): F[Unit] =
     monad.ifM(monad.pure(closeClient))(
       monad.cancelable[Unit] { cb =>
-        val cf = connection.closeAsync().thenCompose(_ => client.shutdownAsync()).whenComplete {
-          (_: Void, err: Throwable) =>
+        val cf =
+          connection.closeAsync().thenCompose(_ => client.shutdownAsync()).whenComplete { (_: Void, err: Throwable) =>
             if (err != null) cb(Left(err))
             else cb(Right(()))
-        }
+          }
 
         () => monad.eval(cf.toCompletableFuture.cancel(true))
       },

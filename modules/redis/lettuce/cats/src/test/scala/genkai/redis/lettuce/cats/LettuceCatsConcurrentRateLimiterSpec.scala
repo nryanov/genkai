@@ -7,9 +7,7 @@ import genkai.redis.lettuce.LettuceConcurrentRateLimiterSpec
 
 import scala.concurrent.Future
 
-class LettuceCatsConcurrentRateLimiterSpec
-    extends LettuceConcurrentRateLimiterSpec[IO]
-    with CatsBaseSpec {
+class LettuceCatsConcurrentRateLimiterSpec extends LettuceConcurrentRateLimiterSpec[IO] with CatsBaseSpec {
   override def concurrentRateLimiter(strategy: ConcurrentStrategy): ConcurrentRateLimiter[IO] =
     LettuceCatsAsyncConcurrentRateLimiter.useClient[IO](redisClient, strategy).unsafeRunSync()
 

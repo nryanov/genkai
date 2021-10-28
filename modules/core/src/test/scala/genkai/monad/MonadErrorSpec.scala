@@ -65,9 +65,7 @@ trait MonadErrorSpec[F[_]] extends AsyncFunSuite with Matchers with ScalaFutures
 
   test("map error") {
     toFuture(
-      monadError
-        .raiseError(new Exception("some error"))
-        .mapError(_ => new Exception("another error"))
+      monadError.raiseError(new Exception("some error")).mapError(_ => new Exception("another error"))
     ).transformWith {
       case Failure(exception) =>
         Future.successful(exception.getLocalizedMessage shouldBe "another error")
@@ -78,8 +76,8 @@ trait MonadErrorSpec[F[_]] extends AsyncFunSuite with Matchers with ScalaFutures
   test("handle error") {
     for {
       r <- toFuture(
-        monadError.raiseError[Boolean](new Exception("should be handled")).handleErrorWith {
-          case _: Throwable => monadError.pure(true)
+        monadError.raiseError[Boolean](new Exception("should be handled")).handleErrorWith { case _: Throwable =>
+          monadError.pure(true)
         }
       )
     } yield r shouldBe true
@@ -157,8 +155,8 @@ trait MonadErrorSpec[F[_]] extends AsyncFunSuite with Matchers with ScalaFutures
     for {
       _ <- toFuture(
         monadError
-          .bracket(monadError.unit)(_ => monadError.raiseError[Unit](new Exception("some error")))(
-            _ => monadError.eval(count += 1)
+          .bracket(monadError.unit)(_ => monadError.raiseError[Unit](new Exception("some error")))(_ =>
+            monadError.eval(count += 1)
           )
           .handleErrorWith { case _ =>
             monadError.unit

@@ -25,8 +25,7 @@ abstract class JedisConcurrentRateLimiter[F[_]](
     monad.bracket(acquire(key, instant)) { acquired =>
       monad.ifM(monad.pure(acquired))(
         ifTrue = monad.suspend(f).map[Either[ConcurrentLimitExhausted[A], B]](r => Right(r)),
-        ifFalse =
-          monad.pure[Either[ConcurrentLimitExhausted[A], B]](Left(ConcurrentLimitExhausted(key)))
+        ifFalse = monad.pure[Either[ConcurrentLimitExhausted[A], B]](Left(ConcurrentLimitExhausted(key)))
       )
     }(acquired => monad.whenA(acquired)(release(key, instant).void))
 
@@ -36,34 +35,31 @@ abstract class JedisConcurrentRateLimiter[F[_]](
     useClient(client => monad.eval(client.unlink(keyStr: _*)))
   }
 
-  override private[genkai] def acquire[A: Key](key: A, instant: Instant): F[Boolean] = useClient {
-    client =>
-      val keys = strategy.keys(key, instant)
-      val args = keys ::: strategy.acquireArgs(instant)
+  override private[genkai] def acquire[A: Key](key: A, instant: Instant): F[Boolean] = useClient { client =>
+    val keys = strategy.keys(key, instant)
+    val args = keys ::: strategy.acquireArgs(instant)
 
-      for {
-        tokens <- monad.eval(client.evalsha(acquireSha, keys.size, args: _*))
-      } yield strategy.isAllowed(tokens.toString.toLong)
+    for {
+      tokens <- monad.eval(client.evalsha(acquireSha, keys.size, args: _*))
+    } yield strategy.isAllowed(tokens.toString.toLong)
   }
 
-  override private[genkai] def release[A: Key](key: A, instant: Instant): F[Boolean] = useClient {
-    client =>
-      val keys = strategy.keys(key, instant)
-      val args = keys ::: strategy.releaseArgs(instant)
+  override private[genkai] def release[A: Key](key: A, instant: Instant): F[Boolean] = useClient { client =>
+    val keys = strategy.keys(key, instant)
+    val args = keys ::: strategy.releaseArgs(instant)
 
-      for {
-        tokens <- monad.eval(client.evalsha(releaseSha, keys.size, args: _*))
-      } yield strategy.isReleased(tokens.toString.toLong)
+    for {
+      tokens <- monad.eval(client.evalsha(releaseSha, keys.size, args: _*))
+    } yield strategy.isReleased(tokens.toString.toLong)
   }
 
-  override private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long] = useClient {
-    client =>
-      val keys = strategy.keys(key, instant)
-      val args = keys ::: strategy.permissionsArgs(instant)
+  override private[genkai] def permissions[A: Key](key: A, instant: Instant): F[Long] = useClient { client =>
+    val keys = strategy.keys(key, instant)
+    val args = keys ::: strategy.permissionsArgs(instant)
 
-      for {
-        tokens <- monad.eval(client.evalsha(permissionsSha, keys.size, args: _*))
-      } yield strategy.toPermissions(tokens.toString.toLong)
+    for {
+      tokens <- monad.eval(client.evalsha(permissionsSha, keys.size, args: _*))
+    } yield strategy.toPermissions(tokens.toString.toLong)
   }
 
   override def close(): F[Unit] = monad.whenA(closeClient)(monad.eval(pool.close()))
@@ -71,7 +67,5 @@ abstract class JedisConcurrentRateLimiter[F[_]](
   override def monadError: MonadError[F] = monad
 
   private def useClient[A](fa: Jedis => F[A]): F[A] =
-    monad.bracket(monad.eval(pool.getResource))(client => fa(client))(client =>
-      monad.eval(client.close())
-    )
+    monad.bracket(monad.eval(pool.getResource))(client => fa(client))(client => monad.eval(client.close()))
 }

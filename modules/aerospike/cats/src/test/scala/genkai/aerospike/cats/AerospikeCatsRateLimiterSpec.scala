@@ -10,9 +10,7 @@ import scala.concurrent.duration._
 
 class AerospikeCatsRateLimiterSpec extends AerospikeSpecForAll[IO] with CatsBaseSpec {
   override def rateLimiter(strategy: Strategy): RateLimiter[IO] =
-    AerospikeCatsRateLimiter
-      .useClient[IO](aerospikeClient, "test", strategy, blocker, 100 millis)
-      .unsafeRunSync()
+    AerospikeCatsRateLimiter.useClient[IO](aerospikeClient, "test", strategy, blocker, 100 millis).unsafeRunSync()
 
   override def toFuture[A](v: IO[A]): Future[A] = v.unsafeToFuture()
 }

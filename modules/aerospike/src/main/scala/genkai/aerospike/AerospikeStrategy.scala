@@ -3,7 +3,7 @@ package genkai.aerospike
 import java.time.Instant
 
 import genkai.{Key, RateLimiter, Strategy, Window}
-import com.aerospike.client.{Value, Key => AKey}
+import com.aerospike.client.{Key => AKey, Value}
 
 /**
  * Aerospike specific wrapper for [[genkai.Strategy]]
@@ -86,8 +86,7 @@ object AerospikeStrategy {
     case inst: Strategy.SlidingWindow => AerospikeSlidingWindow(inst)
   }
 
-  final case class AerospikeTokenBucket(underlying: Strategy.TokenBucket)
-      extends AerospikeStrategy {
+  final case class AerospikeTokenBucket(underlying: Strategy.TokenBucket) extends AerospikeStrategy {
     private val setName: String = "token_bucket_set"
 
     private val argsPart = List(
@@ -140,8 +139,7 @@ object AerospikeStrategy {
     }
   }
 
-  final case class AerospikeFixedWindow(underlying: Strategy.FixedWindow)
-      extends AerospikeStrategy {
+  final case class AerospikeFixedWindow(underlying: Strategy.FixedWindow) extends AerospikeStrategy {
     private val setName: String = "fixed_window_set"
 
     private val permissionArgsPart =
@@ -202,8 +200,7 @@ object AerospikeStrategy {
     }
   }
 
-  final case class AerospikeSlidingWindow(underlying: Strategy.SlidingWindow)
-      extends AerospikeStrategy {
+  final case class AerospikeSlidingWindow(underlying: Strategy.SlidingWindow) extends AerospikeStrategy {
     private val setName: String = "sliding_window_set"
     private val precision = underlying.window match {
       case Window.Second => 1

@@ -7,9 +7,7 @@ import monix.eval.Task
 
 import scala.concurrent.Future
 
-class RedissonMonixConcurrentRateLimiterSpec
-    extends RedissonConcurrentRateLimiterSpec[Task]
-    with MonixBaseSpec {
+class RedissonMonixConcurrentRateLimiterSpec extends RedissonConcurrentRateLimiterSpec[Task] with MonixBaseSpec {
   override def concurrentRateLimiter(strategy: ConcurrentStrategy): ConcurrentRateLimiter[Task] =
     RedissonMonixAsyncConcurrentRateLimiter.useClient(redisClient, strategy).runSyncUnsafe()
 

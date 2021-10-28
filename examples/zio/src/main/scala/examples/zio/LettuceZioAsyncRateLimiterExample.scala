@@ -18,9 +18,7 @@ object LettuceZioAsyncRateLimiterExample extends App {
           ZIO
             // add non-default cost for each request
             .ifM(rateLimiter.acquire("key", 2))(
-              ref
-                .updateAndGet(_ + 1)
-                .flatMap(counter => ZIO.effectTotal(println(s"Counter: $counter"))),
+              ref.updateAndGet(_ + 1).flatMap(counter => ZIO.effectTotal(println(s"Counter: $counter"))),
               ZIO.effectTotal(println("Sleep")) *> ZIO.sleep(1.second)
             )
             .unit
