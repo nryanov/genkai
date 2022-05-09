@@ -2,13 +2,13 @@ lazy val kindProjectorVersion = "0.13.2"
 // backends
 lazy val lettuceVersion = "6.1.8.RELEASE"
 lazy val jedisVersion = "4.2.2"
-lazy val redissonVersion = "3.17.0"
+lazy val redissonVersion = "3.17.1"
 lazy val aerospikeClientVersion = "6.0.0"
 // effects
 lazy val catsVersion = "2.5.3"
 lazy val cats3Version = "3.2.1"
-lazy val zioVersion = "1.0.14"
-lazy val monixVersion = "3.4.0"
+lazy val zioVersion = "1.0.12"
+lazy val monixVersion = "3.4.1"
 // test
 lazy val scalatestVersion = "3.2.11"
 lazy val testContainersVersion = "0.39.12"
