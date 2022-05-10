@@ -6,7 +6,7 @@ lazy val redissonVersion = "3.17.1"
 lazy val aerospikeClientVersion = "6.0.0"
 // effects
 lazy val catsVersion = "2.5.3"
-lazy val cats3Version = "3.2.1"
+lazy val cats3Version = "3.2.9"
 lazy val zioVersion = "1.0.14"
 lazy val monixVersion = "3.4.1"
 // test
